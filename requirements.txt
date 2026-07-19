@@ -1,0 +1,26 @@
+# Pin versions as analyses are finalized
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+scikit-learn
+statsmodels
+scanpy
+anndata
+gseapy
+lxml
+openpyxl
+lifelines
+umap-learn
+leidenalg
+python-igraph
+scikit-image
+tqdm
+jupyter
+ipykernel
+nbclient
+nbconvert
+nbformat
+great-tables
+nokap

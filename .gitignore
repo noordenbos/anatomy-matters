@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Data & outputs (generated locally; not committed)
+data/raw/
+data/processed/
+data/gene_sets/
+data/lymphotyper_inputs/*
+!data/lymphotyper_inputs/README.md
+data/supplementary/
+data/validation/validation_id_map.csv
+data/validation/validation_cohort.xlsx
+data/validation/~$*
+data/lymphotyper/
+data/*.csv
+*.h5ad
+*.h5
+*.parquet
+*.feather
+*.zarr/
+
+# Figure outputs (notebooks write here; not committed)
+figures/**/*
+!figures/.gitkeep
+
+# Notebook run logs
+logs/
+
+# Jupyter duplicates
+notebooks/*-Copy*.ipynb
+notebooks/.sandbox_exec_*.ipynb
+notebooks/nb13_exec.ipynb
+sandbox_runs/
+
+# Maintainer-only (LymphoTyper notebook, local variant paths)
+private/
+
+# Notebook run logs / sandboxes
+notebooks/*.log
+notebooks/.nb3_exec.log
+notebooks/.sandbox_exec_*.ipynb
+
+# Maintainer tooling (local only; not part of public reproduction repo)
+scripts/
+src/
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Secrets
+.env
+.env.*
+*.key
+credentials.json
