@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
 # Bootstrap a local checkout for figure reproduction.
 #
-# Recommended (Zenodo download when published):
+# Recommended (downloads AnnData only from Zenodo; not IMC.7z):
 #   ./setup_dev.sh
 #
-# Workaround until Zenodo is live — point at a local AnnData file (symlink, no copy):
+# Local AnnData instead of Zenodo (symlink, no copy):
 #   ./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad
 #   ./setup_dev.sh /path/to/DLBCL_location_2026.h5ad          # same as --adata
 #
 # Optional: run all figure notebooks after setup (~10–20 minutes typical):
-#   ./setup_dev.sh --execute-figures --adata /path/to/DLBCL_location_2026.h5ad
+#   ./setup_dev.sh --execute-figures
 #
 # Override Zenodo record without editing this file:
-#   ZENODO_RECORD_ID=12345678 ./setup_dev.sh
+#   ZENODO_RECORD_ID=21440631 ./setup_dev.sh
 
 set -euo pipefail
 
-# Set this when the AnnData bundle is published on Zenodo (digits only).
-# Leave empty to require --adata / local path until then.
-DEFAULT_ZENODO_RECORD_ID=""
+# Zenodo record that hosts the public AnnData (not the raw IMC.7z archive).
+DEFAULT_ZENODO_RECORD_ID="21440631"
 
+# Local path notebooks expect. Zenodo filename differs (see ZENODO_ADATA_FILENAME).
 ADATA_BASENAME="DLBCL_location_2026.h5ad"
+ZENODO_ADATA_FILENAME="DLBCL_location_2026.publish.h5ad"
 EXECUTE_FIGURES=0
 ADATA_SRC=""
 ARGS=()
@@ -116,18 +117,33 @@ link_or_copy_adata() {
 
 download_adata_from_zenodo() {
   local record_id="$1"
-  local url="https://zenodo.org/records/${record_id}/files/${ADATA_BASENAME}?download=1"
+  # Fetch only the AnnData object; never the multi-GB IMC.7z on the same record.
+  local url="https://zenodo.org/records/${record_id}/files/${ZENODO_ADATA_FILENAME}?download=1"
+  local tmp="${ADATA_LINK}.partial"
   echo "Downloading AnnData from Zenodo (record ${record_id}) ..."
   echo "  $url"
+  echo "  -> ${ADATA_LINK}"
+  rm -f "$tmp"
   if command -v curl >/dev/null 2>&1; then
-    curl -fL --progress-bar -o "$ADATA_LINK" "$url"
+    curl -fL --progress-bar -o "$tmp" "$url"
   elif command -v wget >/dev/null 2>&1; then
-    wget -O "$ADATA_LINK" "$url"
+    wget -O "$tmp" "$url"
   else
     echo "ERROR: need curl or wget to download from Zenodo." >&2
     exit 1
   fi
-  echo "Saved $ADATA_LINK"
+  # HDF5 signature (\x89HDF\r\n\x1a\n)
+  if ! python3 - "$tmp" <<'PY'
+import pathlib, sys
+sys.exit(0 if pathlib.Path(sys.argv[1]).read_bytes()[:8] == b"\x89HDF\r\n\x1a\n" else 1)
+PY
+  then
+    echo "ERROR: downloaded file is not a valid HDF5/AnnData file." >&2
+    rm -f "$tmp"
+    exit 1
+  fi
+  mv "$tmp" "$ADATA_LINK"
+  echo "Saved $ADATA_LINK ($(du -h "$ADATA_LINK" | awk '{print $1}'))"
 }
 
 ZENODO_RECORD_ID="${ZENODO_RECORD_ID:-$DEFAULT_ZENODO_RECORD_ID}"
@@ -144,14 +160,14 @@ else
 AnnData is not installed yet, and Zenodo download is not enabled
 (DEFAULT_ZENODO_RECORD_ID is empty / ZENODO_RECORD_ID unset).
 
-Workaround — symlink a local copy (no file copy; ~0.6–2 GB):
+Workaround — symlink a local copy (no file copy; ~0.6 GB):
 
   ./setup_dev.sh --adata /path/to/${ADATA_BASENAME}
 
-When the Zenodo record is published, either set DEFAULT_ZENODO_RECORD_ID
-in setup_dev.sh or run:
+Or download only the AnnData from Zenodo (not IMC.7z):
 
-  ZENODO_RECORD_ID=<record_id> ./setup_dev.sh
+  curl -fL -o data/${ADATA_BASENAME} \\
+    "https://zenodo.org/records/${DEFAULT_ZENODO_RECORD_ID:-21440631}/files/${ZENODO_ADATA_FILENAME}?download=1"
 
 EOF
 fi

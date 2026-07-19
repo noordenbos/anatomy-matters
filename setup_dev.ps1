@@ -1,19 +1,19 @@
 ﻿# Bootstrap a local checkout for figure reproduction (Windows PowerShell).
 #
-# Recommended (Zenodo download when published):
+# Recommended (downloads AnnData only from Zenodo; not IMC.7z):
 #   .\setup_dev.ps1
 #
-# Workaround until Zenodo is live - point at a local AnnData file (symlink, no copy):
+# Local AnnData instead of Zenodo (symlink, no copy):
 #   .\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad
 #
 # Optional: run all figure notebooks after setup:
-#   .\setup_dev.ps1 -ExecuteFigures -Adata C:\path\to\DLBCL_location_2026.h5ad
+#   .\setup_dev.ps1 -ExecuteFigures
 #
 # If script execution is blocked once:
 #   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 #
 # Override Zenodo record without editing this file:
-#   $env:ZENODO_RECORD_ID = "12345678"; .\setup_dev.ps1
+#   $env:ZENODO_RECORD_ID = "21440631"; .\setup_dev.ps1
 
 [CmdletBinding()]
 param(
@@ -24,11 +24,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Set this when the AnnData bundle is published on Zenodo (digits only).
-# Leave empty to require -Adata until then.
-$DefaultZenodoRecordId = ""
+# Zenodo record that hosts the public AnnData (not the raw IMC.7z archive).
+$DefaultZenodoRecordId = "21440631"
 
+# Local path notebooks expect. Zenodo filename differs (see $ZenodoAdataFilename).
 $AdataBasename = "DLBCL_location_2026.h5ad"
+$ZenodoAdataFilename = "DLBCL_location_2026.publish.h5ad"
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $RepoRoot
 
@@ -95,14 +96,35 @@ function Link-Adata {
 
 function Download-AdataFromZenodo {
     param([string]$RecordId, [string]$LinkPath)
-    $url = "https://zenodo.org/records/$RecordId/files/$AdataBasename`?download=1"
+    # Fetch only the AnnData object; never the multi-GB IMC.7z on the same record.
+    $url = "https://zenodo.org/records/$RecordId/files/$ZenodoAdataFilename`?download=1"
     Write-Host "Downloading AnnData from Zenodo (record $RecordId) ..."
     Write-Host "  $url"
+    Write-Host "  -> $LinkPath"
     $linkDir = Split-Path -Parent $LinkPath
     if (-not (Test-Path -LiteralPath $linkDir)) {
         New-Item -ItemType Directory -Force -Path $linkDir | Out-Null
     }
-    Invoke-WebRequest -Uri $url -OutFile $LinkPath
+    $tmp = "$LinkPath.partial"
+    if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force }
+    Invoke-WebRequest -Uri $url -OutFile $tmp
+    $fs = [System.IO.File]::OpenRead($tmp)
+    try {
+        $sig = New-Object byte[] 8
+        [void]$fs.Read($sig, 0, 8)
+    } finally {
+        $fs.Close()
+    }
+    $expected = [byte[]](0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a)
+    $ok = $true
+    for ($i = 0; $i -lt 8; $i++) {
+        if ($sig[$i] -ne $expected[$i]) { $ok = $false; break }
+    }
+    if (-not $ok) {
+        Remove-Item -LiteralPath $tmp -Force
+        throw "Downloaded file is not a valid HDF5/AnnData file."
+    }
+    Move-Item -LiteralPath $tmp -Destination $LinkPath -Force
     Write-Host "Saved $LinkPath"
 }
 

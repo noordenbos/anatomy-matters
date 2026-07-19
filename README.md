@@ -26,32 +26,32 @@ No Git? See [First time with Python / Git](#first-time-with-python--git) (ZIP do
 
 ### 2. Run the setup script
 
-**Until the Zenodo deposit is public**, pass a local AnnData file (symlink when possible — does not copy the ~0.6–2 GB file):
-
 **macOS / Linux / WSL**
 
 ```bash
 chmod +x setup_dev.sh
-./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad
+./setup_dev.sh
 ```
 
 **Windows PowerShell**
 
 ```powershell
 # If blocked once: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad
+.\setup_dev.ps1
 ```
 
-**After Zenodo is live**, a plain run downloads the bundle automatically (`./setup_dev.sh` or `.\setup_dev.ps1`).
+This downloads **only** the AnnData (~600 MB) from Zenodo record [21440631](https://zenodo.org/records/21440631) into `data/DLBCL_location_2026.h5ad`. It does **not** download the raw IMC archive (`IMC.7z`).
+
+To use a local AnnData instead: `./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad` (or `.\setup_dev.ps1 -Adata ...`).
 
 Optional: execute every figure notebook after setup (most notebooks finish in under ~5 minutes; full suite often ~10–20 minutes):
 
 ```bash
-./setup_dev.sh --execute-figures --adata /path/to/DLBCL_location_2026.h5ad
+./setup_dev.sh --execute-figures
 ```
 
 ```powershell
-.\setup_dev.ps1 -ExecuteFigures -Adata C:\path\to\DLBCL_location_2026.h5ad
+.\setup_dev.ps1 -ExecuteFigures
 ```
 
 The script creates `.venv`, installs `requirements.txt`, places `data/DLBCL_location_2026.h5ad`, then offers a short menu (Jupyter / re-run all / exit) and prints the commands to use next time.
@@ -205,12 +205,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 mkdir -p data
-# Until Zenodo is live — symlink a local file:
-ln -s /path/to/DLBCL_location_2026.h5ad data/DLBCL_location_2026.h5ad
-
-# After Zenodo (replace RECORD_ID):
-# curl -L -o data/DLBCL_location_2026.h5ad \
-#   "https://zenodo.org/records/RECORD_ID/files/DLBCL_location_2026.h5ad?download=1"
+# AnnData only (~600 MB); do not download IMC.7z from the same Zenodo record
+curl -fL -o data/DLBCL_location_2026.h5ad \
+  "https://zenodo.org/records/21440631/files/DLBCL_location_2026.publish.h5ad?download=1"
 ```
 
 </details>
