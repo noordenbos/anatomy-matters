@@ -18,7 +18,7 @@ There are eleven independent Jupyter notebooks (`fig1`–`fig6`, `supplemental_f
 ### 1. Get the code
 
 ```bash
-git clone -b public https://github.com/noordenbos/DLBCL_location_2026.git
+git clone https://github.com/noordenbos/anatomy-matters.git
 cd DLBCL_location_2026
 ```
 
@@ -100,14 +100,14 @@ git --version        # optional if you use the ZIP workaround below
 
 ### ZIP download (no Git)
 
-1. Open the GitHub repo → branch dropdown → choose **`public`**.
+1. Open the GitHub repo.
 2. **Code → Download ZIP**.
 3. Unzip, then in a terminal:
 
 **macOS / Linux / WSL**
 
 ```bash
-cd /path/to/DLBCL_location_2026-public   # folder name may include -public
+cd /path/to/DLBCL_location_2026   
 chmod +x setup_dev.sh
 ./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad
 ```
@@ -115,7 +115,7 @@ chmod +x setup_dev.sh
 **Windows PowerShell**
 
 ```powershell
-cd C:\path\to\DLBCL_location_2026-public
+cd C:\path\to\DLBCL_location_2026
 .\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad
 ```
 
@@ -198,7 +198,7 @@ Prefer [`./setup_dev.sh`](#recommended-setup-use-the-script) or [`.\setup_dev.ps
 <summary>macOS / Linux (click to expand)</summary>
 
 ```bash
-git clone -b public https://github.com/noordenbos/DLBCL_location_2026.git
+git clone https://github.com/noordenbos/anatomy-matters.git
 cd DLBCL_location_2026
 python3 -m venv .venv
 source .venv/bin/activate
@@ -218,7 +218,7 @@ curl -fL -o data/DLBCL_location_2026.h5ad \
 Prefer `.\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad`. Manual equivalent:
 
 ```powershell
-git clone -b public https://github.com/noordenbos/DLBCL_location_2026.git
+git clone https://github.com/noordenbos/anatomy-matters.git
 cd DLBCL_location_2026
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
