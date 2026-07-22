@@ -3,7 +3,7 @@
 Code and notebooks to reproduce the figures in our manuscript (preprint; journal submission pending).
 
 Notebooks are committed **with inline outputs**, so you can browse results without re-running.
-We do invite reviewers/editors/public to rerun the notebooks as a fully reproducible pipeline, this proces is simplified to 2 simple steps to lower participation threshold.
+We do invite reviewers/editors/public to rerun the notebooks as a fully reproducible pipeline, this process is simplified to 2 simple steps to lower participation threshold.
 There are eleven independent Jupyter notebooks (`fig1`–`fig6`, `supplemental_fig1`–`supplemental_fig5`) which read the same single AnnData file (~600MB), that is automatically pulled from zenodo. 
 
 ---
@@ -19,7 +19,7 @@ There are eleven independent Jupyter notebooks (`fig1`–`fig6`, `supplemental_f
 
 ```bash
 git clone https://github.com/noordenbos/anatomy-matters.git
-cd DLBCL_location_2026
+cd anatomy-matters
 ```
 
 No Git? See [First time with Python / Git](#first-time-with-python--git) (ZIP download workaround).
@@ -107,7 +107,7 @@ git --version        # optional if you use the ZIP workaround below
 **macOS / Linux / WSL**
 
 ```bash
-cd /path/to/DLBCL_location_2026   
+cd /path/to/anatomy-matters-main   # folder name may include -main
 chmod +x setup_dev.sh
 ./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad
 ```
@@ -115,7 +115,7 @@ chmod +x setup_dev.sh
 **Windows PowerShell**
 
 ```powershell
-cd C:\path\to\DLBCL_location_2026
+cd C:\path\to\anatomy-matters-main
 .\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad
 ```
 
@@ -199,7 +199,7 @@ Prefer [`./setup_dev.sh`](#recommended-setup-use-the-script) or [`.\setup_dev.ps
 
 ```bash
 git clone https://github.com/noordenbos/anatomy-matters.git
-cd DLBCL_location_2026
+cd anatomy-matters
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -219,7 +219,7 @@ Prefer `.\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad`. Manual equi
 
 ```powershell
 git clone https://github.com/noordenbos/anatomy-matters.git
-cd DLBCL_location_2026
+cd anatomy-matters
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
