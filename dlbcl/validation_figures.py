@@ -79,7 +79,7 @@ def build_survival_table(pred: pd.DataFrame) -> pd.DataFrame:
     surv["time"] = pd.to_numeric(pred["follow_up_time"], errors="coerce")
     surv["event"] = pd.to_numeric(pred["vital_status"], errors="coerce")
     surv["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
-    surv["archetype_id"] = pd.to_numeric(pred["pred_abundance_cluster_30"], errors="coerce").astype("Int64")
+    surv["archetype_id"] = pd.to_numeric(pred["pred_tumorimmune_archetype_id"], errors="coerce").astype("Int64")
     surv["Archetype"] = surv["archetype_id"].map(ARCHETYPE_NAME_MAP)
     return surv.dropna(subset=["time", "event", "Location", "Archetype"])
 
@@ -654,7 +654,8 @@ def run_archetype_gsea(X, y, cluster_order, *, genesets="MSigDB_Hallmark_2020", 
 
 
 def plot_gsea_dotplot(gsea_long, cluster_order, *, out_path, genesets="MSigDB_Hallmark_2020",
-                      top_m=10, fdr_th=0.25, size_cap=14.0, size_scale=35.0, cmap="PuOr_r", show=True):
+                      top_m=10, fdr_th=0.25, size_cap=14.0, size_scale=35.0,
+                      nonsignificant_size=18.0, cmap="PuOr_r", show=True):
     import matplotlib.pyplot as plt
 
     col_labels = [SHORT_LABELS[c] for c in cluster_order]
@@ -676,9 +677,13 @@ def plot_gsea_dotplot(gsea_long, cluster_order, *, out_path, genesets="MSigDB_Ha
         .reset_index().rename(columns={"level_0": "Term", "level_1": "cluster_name"})
     )
     neglog = np.clip(-np.log10(np.clip(plot_df["fdr"].values, 1e-300, 1.0)), 0, size_cap)
-    plot_df["size"] = 0.0
-    sig = plot_df["fdr"] <= fdr_th
-    plot_df.loc[sig, "size"] = neglog[sig.values] * size_scale
+    finite_nes = plot_df["NES"].notna()
+    sig = finite_nes & (plot_df["fdr"] <= fdr_th)
+    plot_df["size"] = np.where(finite_nes, nonsignificant_size, 0.0)
+    plot_df.loc[sig, "size"] = np.maximum(
+        nonsignificant_size,
+        neglog[sig.values] * size_scale,
+    )
     x_map = {cls: i for i, cls in enumerate(cluster_order)}
     y_terms = list(nes_sel.index)
     y_map = {t: i for i, t in enumerate(y_terms)}
@@ -696,7 +701,7 @@ def plot_gsea_dotplot(gsea_long, cluster_order, *, out_path, genesets="MSigDB_Ha
     ax.set_yticks(range(len(y_terms)))
     ax.set_yticklabels(y_terms, fontsize=14)
     ax.invert_yaxis()
-    ax.set_xlabel("abundance_cluster_30 (predicted)", fontsize=13)
+    ax.set_xlabel("tumorimmune_archetype_id (predicted)", fontsize=13)
     ax.set_ylabel("Pathway", fontsize=13)
     ax.set_title(f"GSEA dotplot ({genesets}) — one-vs-rest, validation", fontsize=14)
     ax.set_facecolor("white")
@@ -712,12 +717,15 @@ def plot_gsea_dotplot(gsea_long, cluster_order, *, out_path, genesets="MSigDB_Ha
     cbar.set_label("NES", fontsize=14)
     plt.tight_layout()
 
-    handles, labels = [], []
-    for nv in [1.3, 2, 3, 4]:
+    handles = [
+        ax.scatter([], [], s=nonsignificant_size, c="white", edgecolors="black", linewidths=0.3)
+    ]
+    labels = [f"FDR > {fdr_th:g}"]
+    for nv in [1, 2, 3, 4]:
         if nv > size_cap:
             continue
-        handles.append(ax.scatter([], [], s=(nv + 0.2) * size_scale, c="white", edgecolors="black", linewidths=0.3))
-        labels.append("smaller = ns" if nv == 1.3 else f"-log10(FDR)={nv:g}")
+        handles.append(ax.scatter([], [], s=nv * size_scale, c="white", edgecolors="black", linewidths=0.3))
+        labels.append(f"-log10(FDR)={nv:g}")
     ax.legend(handles, labels, title="Significance", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=False)
 
     out_path = Path(out_path)
@@ -751,8 +759,8 @@ def build_integration_metadata_validation(
     meta = pd.DataFrame(index=pred.index.astype(str))
     meta.index.name = "patient_id"
     meta["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
-    meta["abundance_cluster_30"] = pd.to_numeric(pred["pred_abundance_cluster_30"], errors="coerce").astype("Int64")
-    meta["abundance_cluster_30_label"] = meta["abundance_cluster_30"].map(ARCHETYPE_NAME_MAP)
+    meta["tumorimmune_archetype_id"] = pd.to_numeric(pred["pred_tumorimmune_archetype_id"], errors="coerce").astype("Int64")
+    meta["tumorimmune_archetype"] = meta["tumorimmune_archetype_id"].map(ARCHETYPE_NAME_MAP)
     coo_map = {"GCB": "GCB", "Non-GCB": "ABC"}
     meta["COO_NanoString"] = pred["coo_hans"].map(coo_map)
     return meta[meta["Location"].notna()].copy()
@@ -795,7 +803,7 @@ def plot_ecotyper_bcell_by_archetype(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    archetype_col = "abundance_cluster_30_label"
+    archetype_col = "tumorimmune_archetype"
     archetype = archetype.rename(archetype_col) if archetype.name != archetype_col else archetype
     archetype = archetype.reindex(bstate.index.astype(str))
     plot_df = bstate[["Dominant_B_cell_state"]].join(archetype, how="inner").dropna()

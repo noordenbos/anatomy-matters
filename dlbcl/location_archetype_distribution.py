@@ -43,7 +43,7 @@ def build_location_archetype_frame(pred: pd.DataFrame) -> pd.DataFrame:
     """Location + predicted archetype labels from validation ``pred`` table."""
     df = pd.DataFrame(index=pred.index)
     df["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
-    archetype_id = pd.to_numeric(pred["pred_abundance_cluster_30"], errors="coerce")
+    archetype_id = pd.to_numeric(pred["pred_tumorimmune_archetype_id"], errors="coerce")
     df["Archetype"] = archetype_id.map(ARCHETYPE_NAME_MAP)
     return df.dropna(subset=["Location", "Archetype"]).copy()
 

@@ -60,7 +60,7 @@ _LRT_COMPARE_ORDER = [
 ]
 
 _PCNSL_LOCATION_LABELS = frozenset({"cns", "pcns", "pcnsl"})
-REF_IPI_SCORE = "0-1"
+REF_IPI_SCORE = "0-2"
 
 ARCHETYPE_IPI_COHORTS = (
     {
@@ -69,9 +69,9 @@ ARCHETYPE_IPI_COHORTS = (
         "stem": "cox_multivar_archetype_ipi_exclude_pcnsl_OS",
     },
     {
-        "key": "include_pcnsl_ipi_gt3",
-        "label": "Non-PCNSL + PCNSL with IPI >3",
-        "stem": "cox_multivar_archetype_ipi_include_pcnsl_ipi_gt3_OS",
+        "key": "include_pcnsl",
+        "label": "Include PCNSL (IPI/MSKCC)",
+        "stem": "cox_multivar_archetype_ipi_include_pcnsl_OS",
     },
 )
 
@@ -94,7 +94,7 @@ def prepare_cox_survival(pred: pd.DataFrame) -> pd.DataFrame:
     surv[TIME_COL] = pd.to_numeric(pred["follow_up_time"], errors="coerce")
     surv[EVENT_COL] = pd.to_numeric(pred["vital_status"], errors="coerce")
     surv["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
-    archetype_id = pd.to_numeric(pred["pred_abundance_cluster_30"], errors="coerce")
+    archetype_id = pd.to_numeric(pred["pred_tumorimmune_archetype_id"], errors="coerce")
     surv["Archetype"] = archetype_id.map({1: "low immune", 2: "cytotoxic predominant", 3: "complex immune"})
     sex_map = {"Male": 1.0, "Female": 0.0, "male": 1.0, "female": 0.0}
     surv["Sex"] = pred["sex"].map(sex_map)
@@ -135,32 +135,14 @@ def _is_pcnsl_location(value: object) -> bool:
 
 
 def attach_ipi_score(surv: pd.DataFrame, pred: pd.DataFrame) -> pd.DataFrame:
-    """Add workbook IPI (0–1 vs >3; PCNSL without score assigned >3) to a Cox table."""
-    from .validation_classifier_survival import (
-        OPTIONAL_BASELINE_CANDIDATES,
-        _coerce_ipi_baseline,
-        _first_column,
-    )
+    """Add IPI/MSKCC primary bucket (``0-2`` vs ``>=3``) via component-aware scoring.
 
-    out = surv.copy()
-    pred = pred.copy()
-    pred.index = pred.index.astype(str)
-    out.index = out.index.astype(str)
+    Systemic DLBCL uses IPI (including concrete ``ipi_score`` when present); PCNSL
+    uses MSKCC class (1–2 → ``0-2``, 3 → ``>=3``).
+    """
+    from .validation_ipi import attach_ipi_ielsg_to_survival
 
-    ipi_col = _first_column(pred, OPTIONAL_BASELINE_CANDIDATES["IPI_score"])
-    if ipi_col is None:
-        return out
-
-    ipi_mapped = _coerce_ipi_baseline(
-        pred[ipi_col].reindex(out.index),
-        location=out.get("Location"),
-    )
-    if ipi_mapped.notna().any():
-        out["IPI_score"] = pd.Categorical(
-            ipi_mapped,
-            categories=["0-1", ">3"],
-            ordered=False,
-        )
+    out, _extra = attach_ipi_ielsg_to_survival(surv, pred, include_secondary=True)
     return out
 
 
@@ -176,12 +158,22 @@ def cohort_exclude_pcnsl(surv: pd.DataFrame) -> pd.DataFrame:
     return surv.loc[mask].copy()
 
 
+def cohort_include_pcnsl(surv: pd.DataFrame) -> pd.DataFrame:
+    """Keep patients with an assignable IPI/MSKCC primary bucket (includes PCNSL).
+
+    PCNSL risk uses MSKCC class (1–2 → ``0-2``, 3 → ``>=3``); systemic uses IPI.
+    """
+    if "IPI_score" not in surv.columns:
+        return surv.iloc[0:0].copy()
+    out = surv.loc[surv["IPI_score"].notna()].copy()
+    if out["IPI_score"].notna().any():
+        out["IPI_score"] = _set_reference(out["IPI_score"].astype(object), REF_IPI_SCORE)
+    return out
+
+
 def cohort_include_pcnsl_ipi_gt3(surv: pd.DataFrame) -> pd.DataFrame:
-    """Keep all non-PCNSL patients plus PCNSL patients with IPI >3."""
-    is_pcnsl = surv["Location"].map(_is_pcnsl_location)
-    ipi = surv["IPI_score"].astype(str)
-    keep = (~is_pcnsl) | (ipi == ">3")
-    return surv.loc[keep].copy()
+    """Deprecated alias for :func:`cohort_include_pcnsl` (no longer force-codes PCNSL)."""
+    return cohort_include_pcnsl(surv)
 
 
 def _archetype_ipi_categorical_spec(surv: pd.DataFrame) -> dict:
@@ -208,8 +200,8 @@ def _archetype_ipi_categorical_spec(surv: pd.DataFrame) -> dict:
 def _cohort_filter_fn(key: str):
     if key == "exclude_pcnsl":
         return cohort_exclude_pcnsl
-    if key == "include_pcnsl_ipi_gt3":
-        return cohort_include_pcnsl_ipi_gt3
+    if key in {"include_pcnsl", "include_pcnsl_ipi_gt3"}:
+        return cohort_include_pcnsl
     raise ValueError(f"Unknown archetype+IPI cohort key: {key}")
 
 
@@ -221,7 +213,7 @@ def run_multivariable_archetype_ipi(
     out_dir: Path,
     show: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
-    """Multivariable Cox: Archetype + IPI_score (reference archetype complex immune; IPI 0–1)."""
+    """Multivariable Cox: Archetype + IPI_score (reference archetype complex immune; IPI/MSKCC 0–2)."""
     out_dir = Path(out_dir)
     work = surv.dropna(subset=[TIME_COL, EVENT_COL, "Archetype", "IPI_score"]).copy()
     if work.shape[0] < 10 or int(work[EVENT_COL].sum()) < 5:
@@ -1188,22 +1180,35 @@ def save_within_location_archetype_forest_plots(
 
 
 # --------------------------------------------------------------------------- #
-# Archetype OS benchmark table (validation + published cohorts)
+# Archetype OS cohort forest (internal validation + external cohorts)
 # --------------------------------------------------------------------------- #
 
 DIVERSE_IMMUNE_ARCHETYPE = "complex immune"
 LO_CP_ARCHETYPES = ("low immune", "cytotoxic predominant")
 
-# 5-year OS univariable Cox: diverse immune (complex immune) vs LO+CP reference.
+ARCHETYPE_OS_FOREST_UNS_KEY = "archetype_os_forest"
+ARCHETYPE_OS_FOREST_TITLE = "5-year overall survival"
+ARCHETYPE_OS_FOREST_SUBTITLE = "Cytotoxic Predominant and Low Immune versus Diverse Immune"
+
+# Display labels for the manuscript forest (dataset keys stay short in the table).
+ARCHETYPE_OS_FOREST_DISPLAY_LABELS = {
+    "Validation": "Internal Validation",
+    "Internal Validation": "Internal Validation",
+    "Schmitz": "External: Schmitz",
+    "Chapuy": "External: Chapuy",
+    "Ennishi": "External: Ennishi",
+}
+
+# Fallback external + legacy internal rows (updated Validation is recomputed from pred).
 ARCHETYPE_OS_BENCHMARK_ROWS: tuple[dict[str, object], ...] = (
     {
         "Dataset": "Validation",
-        "n": 308,
-        "Events": 98,
-        "HR": 2.15,
-        "ci_lower": 1.19,
-        "ci_upper": 3.90,
-        "p": 0.0116,
+        "n": 302,
+        "Events": 102,
+        "HR": 1.84,
+        "ci_lower": 1.04,
+        "ci_upper": 3.27,
+        "p": 0.0367,
     },
     {
         "Dataset": "Schmitz",
@@ -1234,6 +1239,8 @@ ARCHETYPE_OS_BENCHMARK_ROWS: tuple[dict[str, object], ...] = (
     },
 )
 
+EXTERNAL_ARCHETYPE_OS_DATASETS = ("Schmitz", "Chapuy", "Ennishi")
+
 
 def apply_os_landmark_censoring(
     surv: pd.DataFrame,
@@ -1243,10 +1250,78 @@ def apply_os_landmark_censoring(
     """Landmark OS at ``horizon_years`` (censor beyond horizon)."""
     out = surv.copy()
     time = pd.to_numeric(out[TIME_COL], errors="coerce")
-    event = pd.to_numeric(out[EVENT_COL], errors="coerce")
     out.loc[time > horizon_years, EVENT_COL] = 0
     out.loc[time > horizon_years, TIME_COL] = horizon_years
     return out.loc[time > 0].copy()
+
+
+def compute_validation_rest_vs_di_os_row(
+    pred: pd.DataFrame,
+    *,
+    horizon_years: float = OS_BENCHMARK_HORIZON_YEARS,
+    adjust_location: bool = True,
+    source_file: str = "validation_cohort.predictions",
+) -> dict[str, object]:
+    """5-year Cox: LO+CP (rest) vs diverse immune reference, optionally Location-adjusted.
+
+    Matches the manuscript / external-cohort contrast used for the meta-analysis forest.
+    """
+    surv = apply_os_landmark_censoring(prepare_cox_survival(pred), horizon_years=horizon_years)
+    is_di = surv["Archetype"].astype(str).eq(DIVERSE_IMMUNE_ARCHETYPE)
+    work = surv.copy()
+    work["rest"] = (~is_di).astype(float)
+
+    parts = [work[[TIME_COL, EVENT_COL, "rest"]].astype(float)]
+    adjustment = "none"
+    if adjust_location and "Location" in work.columns and work["Location"].nunique(dropna=True) > 1:
+        loc = pd.get_dummies(work["Location"], prefix="Location", drop_first=True).astype(float)
+        parts.append(loc)
+        adjustment = "Location"
+    df = pd.concat(parts, axis=1).replace([np.inf, -np.inf], np.nan).dropna()
+    if df.empty or int(df[EVENT_COL].sum()) < 5:
+        raise ValueError("insufficient validation OS events for rest-vs-DI Cox")
+
+    cph = CoxPHFitter(penalizer=PENALIZER)
+    cph.fit(df, duration_col=TIME_COL, event_col=EVENT_COL)
+    row = cph.summary.loc["rest"]
+    coef = float(row["coef"])
+    se = float(row["se(coef)"])
+    hr = float(np.exp(coef))
+    ci_lower = float(np.exp(row["coef lower 95%"]))
+    ci_upper = float(np.exp(row["coef upper 95%"]))
+    p = float(row["p"])
+    z = float(row["z"])
+
+    n_di = int(is_di.sum())
+    events_di = int(surv.loc[is_di, EVENT_COL].sum())
+    n_rest = int((~is_di).sum())
+    events_rest = int(surv.loc[~is_di, EVENT_COL].sum())
+
+    return {
+        "dataset": "Validation",
+        "contrast": "rest vs diverse immune",
+        "reference": "diverse immune (complex immune)",
+        "comparison": "rest (low immune + cytotoxic predominant)",
+        "time_endpoint": "OS",
+        "time_unit": "years",
+        "time_cap_years": float(horizon_years),
+        "model": "Cox proportional hazards",
+        "adjustment": adjustment,
+        "n": int(len(df)),
+        "events": int(df[EVENT_COL].sum()),
+        "n_diverse_immune": n_di,
+        "events_diverse_immune": events_di,
+        "n_rest": n_rest,
+        "events_rest": events_rest,
+        "HR": hr,
+        "CI_lower": ci_lower,
+        "CI_upper": ci_upper,
+        "log_HR": coef,
+        "SE_log_HR": se,
+        "z": z,
+        "p": p,
+        "source_file": source_file,
+    }
 
 
 def compute_validation_diverse_immune_benchmark_row(
@@ -1254,40 +1329,89 @@ def compute_validation_diverse_immune_benchmark_row(
     *,
     horizon_years: float = OS_BENCHMARK_HORIZON_YEARS,
 ) -> dict[str, object]:
-    """5-year univariable Cox: diverse immune (complex immune) vs LO+CP (QC helper)."""
-    surv = apply_os_landmark_censoring(prepare_cox_survival(pred), horizon_years=horizon_years)
-    diverse = surv["Archetype"].eq(DIVERSE_IMMUNE_ARCHETYPE).astype(int)
-    df = pd.DataFrame(
-        {
-            TIME_COL: surv[TIME_COL],
-            EVENT_COL: surv[EVENT_COL],
-            "diverse_immune": diverse,
-        }
-    ).replace([np.inf, -np.inf], np.nan).dropna()
-    cph = CoxPHFitter(penalizer=PENALIZER)
-    cph.fit(df, duration_col=TIME_COL, event_col=EVENT_COL)
-    row = cph.summary.loc["diverse_immune"]
+    """Backward-compatible wrapper around ``compute_validation_rest_vs_di_os_row``."""
+    row = compute_validation_rest_vs_di_os_row(pred, horizon_years=horizon_years, adjust_location=True)
     return {
         "Dataset": "Validation (computed)",
-        "n": int(len(df)),
-        "HR": float(np.exp(row["coef"])),
-        "p": float(row["p"]),
+        "n": row["n"],
+        "Events": row["events"],
+        "HR": row["HR"],
+        "CI_lower": row["CI_lower"],
+        "CI_upper": row["CI_upper"],
+        "p": row["p"],
     }
 
 
-def _format_benchmark_cell(value: object, *, kind: str) -> str:
-    if value is None or (isinstance(value, float) and np.isnan(value)):
-        return "—"
-    if kind == "n":
-        return str(int(value))
-    if kind == "hr":
-        return f"{float(value):.2f}"
-    if kind == "p":
-        p = float(value)
-        if p < 0.001:
-            return f"{p:.2e}"
-        return f"{p:g}"
-    raise ValueError(f"unknown benchmark cell kind: {kind}")
+def _normalize_archetype_os_forest_studies(df: pd.DataFrame) -> pd.DataFrame:
+    """Harmonize CSV / uns / fallback rows to a common study table."""
+    out = df.copy()
+    rename = {
+        "Dataset": "dataset",
+        "Events": "events",
+        "ci_lower": "CI_lower",
+        "ci_upper": "CI_upper",
+    }
+    out = out.rename(columns={k: v for k, v in rename.items() if k in out.columns})
+    if "dataset" not in out.columns:
+        raise KeyError("archetype OS forest table requires a 'dataset' column")
+    out["dataset"] = out["dataset"].astype(str).replace(
+        {"Internal Validation": "Validation", "Validation (computed)": "Validation"}
+    )
+    for col in ("n", "events", "HR", "CI_lower", "CI_upper", "p"):
+        if col not in out.columns:
+            raise KeyError(f"archetype OS forest table missing required column {col!r}")
+        out[col] = pd.to_numeric(out[col], errors="coerce")
+    out = out.loc[~out["dataset"].str.lower().eq("overall")].copy()
+    out["is_pooled"] = False
+    return out.reset_index(drop=True)
+
+
+def load_archetype_os_forest_studies(
+    *,
+    adata=None,
+    csv_path: Path | str | None = None,
+) -> pd.DataFrame:
+    """Load study-level forest rows from adata.uns, CSV, or hardcoded fallback."""
+    if adata is not None:
+        from .validation_cohort import VALIDATION_COHORT_UNS_KEY, _as_dataframe
+
+        vc = getattr(adata, "uns", {}).get(VALIDATION_COHORT_UNS_KEY)
+        if isinstance(vc, dict) and ARCHETYPE_OS_FOREST_UNS_KEY in vc:
+            return _normalize_archetype_os_forest_studies(_as_dataframe(vc[ARCHETYPE_OS_FOREST_UNS_KEY]))
+
+    if csv_path is not None and Path(csv_path).exists():
+        return _normalize_archetype_os_forest_studies(pd.read_csv(csv_path))
+
+    fallback = pd.DataFrame(ARCHETYPE_OS_BENCHMARK_ROWS)
+    return _normalize_archetype_os_forest_studies(fallback)
+
+
+def merge_validation_into_archetype_os_forest(
+    studies: pd.DataFrame,
+    validation_row: dict[str, object],
+) -> pd.DataFrame:
+    """Replace/insert the Validation study row; keep external cohorts unchanged."""
+    val = _normalize_archetype_os_forest_studies(pd.DataFrame([validation_row]))
+    external = studies.loc[~studies["dataset"].eq("Validation")].copy()
+    # Preserve a stable manuscript order: Validation, Schmitz, Chapuy, Ennishi, …
+    preferred = ["Validation", *EXTERNAL_ARCHETYPE_OS_DATASETS]
+    combined = pd.concat([val, external], ignore_index=True)
+    combined["dataset"] = pd.Categorical(
+        combined["dataset"],
+        categories=preferred + [d for d in combined["dataset"].astype(str) if d not in preferred],
+        ordered=True,
+    )
+    return combined.sort_values("dataset").reset_index(drop=True)
+
+
+def inject_archetype_os_forest_into_adata(adata, studies: pd.DataFrame) -> pd.DataFrame:
+    """Embed study-level forest table under ``adata.uns['validation_cohort']``."""
+    from .validation_cohort import VALIDATION_COHORT_UNS_KEY, _h5ad_safe_dataframe, require_validation_cohort
+
+    require_validation_cohort(adata)
+    clean = _normalize_archetype_os_forest_studies(studies)
+    adata.uns[VALIDATION_COHORT_UNS_KEY][ARCHETYPE_OS_FOREST_UNS_KEY] = _h5ad_safe_dataframe(clean)
+    return clean
 
 
 def build_archetype_os_benchmark_table(
@@ -1299,41 +1423,69 @@ def build_archetype_os_benchmark_table(
 
 
 def build_archetype_os_benchmark_forest_df(
-    rows: tuple[dict[str, object], ...] | None = None,
+    rows: tuple[dict[str, object], ...] | pd.DataFrame | None = None,
     *,
     include_pooled: bool = True,
     pooled_label: str = "Overall",
+    apply_display_labels: bool = True,
 ) -> pd.DataFrame:
     """Forest-plot dataframe with HR confidence intervals and event counts."""
     from .cox_forest_plot import append_pooled_cohort_row
 
-    data = rows or ARCHETYPE_OS_BENCHMARK_ROWS
-    df = pd.DataFrame(data).rename(columns={"ci_lower": "CI_lower", "ci_upper": "CI_upper"})
+    if rows is None:
+        studies = _normalize_archetype_os_forest_studies(pd.DataFrame(ARCHETYPE_OS_BENCHMARK_ROWS))
+    elif isinstance(rows, pd.DataFrame):
+        studies = _normalize_archetype_os_forest_studies(rows)
+    else:
+        studies = _normalize_archetype_os_forest_studies(pd.DataFrame(rows))
+
+    plot_df = studies.rename(
+        columns={"dataset": "Dataset", "events": "Events"}
+    )[["Dataset", "n", "Events", "HR", "CI_lower", "CI_upper", "p", "is_pooled"]].copy()
+
+    if apply_display_labels:
+        plot_df["Dataset"] = (
+            plot_df["Dataset"].astype(str).map(lambda d: ARCHETYPE_OS_FOREST_DISPLAY_LABELS.get(d, d))
+        )
+
     if include_pooled:
-        df = append_pooled_cohort_row(df, label=pooled_label)
-    return df
+        plot_df = append_pooled_cohort_row(plot_df, label=pooled_label)
+    return plot_df
 
 
 def render_archetype_os_benchmark_great_table(
     table_df: pd.DataFrame,
     *,
-    title: str = "Immune archetype prognostic association (OS)",
+    title: str = ARCHETYPE_OS_FOREST_TITLE,
     subtitle: str | None = None,
 ) -> object:
     from great_tables import GT, loc, style
 
     if subtitle is None:
-        subtitle = (
-            f"{int(OS_BENCHMARK_HORIZON_YEARS)}-year univariable Cox; "
-            "diverse immune (complex immune) vs LO+CP (low immune + cytotoxic predominant)"
-        )
+        subtitle = ARCHETYPE_OS_FOREST_SUBTITLE
+
+    def _fmt_n(v):
+        return "—" if v is None or (isinstance(v, float) and np.isnan(v)) else str(int(v))
+
+    def _fmt_hr(v):
+        return "—" if v is None or (isinstance(v, float) and np.isnan(v)) else f"{float(v):.2f}"
+
+    def _fmt_p(v):
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return "—"
+        p = float(v)
+        if p < 0.001:
+            return "<0.001"
+        if p < 0.01:
+            return f"{p:.3f}".rstrip("0").rstrip(".")
+        return f"{p:.2f}"
 
     display_df = pd.DataFrame(
         {
             "Dataset": table_df["Dataset"].astype(str),
-            "n": [_format_benchmark_cell(v, kind="n") for v in table_df["n"]],
-            "HR": [_format_benchmark_cell(v, kind="hr") for v in table_df["HR"]],
-            "p": [_format_benchmark_cell(v, kind="p") for v in table_df["p"]],
+            "n": [_fmt_n(v) for v in table_df["n"]],
+            "HR": [_fmt_hr(v) for v in table_df["HR"]],
+            "p": [_fmt_p(v) for v in table_df["p"]],
         }
     )
 
@@ -1357,7 +1509,7 @@ def save_archetype_os_benchmark_table(
     output_dir: Path | str,
     *,
     stem: str = "archetype_os_cohort_benchmark",
-    title: str = "Immune archetype prognostic association (OS)",
+    title: str = ARCHETYPE_OS_FOREST_TITLE,
     subtitle: str | None = None,
 ) -> dict[str, Path | object]:
     output_dir = Path(output_dir)
@@ -1383,28 +1535,26 @@ def save_archetype_os_benchmark_forest(
     forest_df: pd.DataFrame,
     output_dir: Path | str,
     *,
-    stem: str = "archetype_os_cohort_forest",
-    title: str = "Immune archetype prognostic association (OS)",
-    subtitle: str | None = None,
+    stem: str = "fig5E_archetype_os_cohort_forest",
+    title: str = ARCHETYPE_OS_FOREST_TITLE,
+    subtitle: str | None = ARCHETYPE_OS_FOREST_SUBTITLE,
     show: bool = False,
 ) -> dict[str, Path]:
     from .cox_forest_plot import save_cohort_hr_forest
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    if subtitle is None:
-        subtitle = (
-            f"{int(OS_BENCHMARK_HORIZON_YEARS)}-year univariable Cox; "
-            "diverse immune (complex immune) vs LO+CP (low immune + cytotoxic predominant)"
-        )
-    full_title = f"{title}\n{subtitle}" if subtitle else title
     out_stem = output_dir / stem
+    # forest_df may already contain the Overall row from build_*.
     save_cohort_hr_forest(
         forest_df,
         out_stem,
-        title=full_title,
+        title=title,
+        subtitle=subtitle,
         log_x=True,
-        include_pooled=False,
+        include_pooled=not bool(
+            forest_df.get("is_pooled", pd.Series(False, index=forest_df.index)).fillna(False).any()
+        ),
         show=show,
     )
     return {
@@ -1412,3 +1562,82 @@ def save_archetype_os_benchmark_forest(
         "png": out_stem.with_suffix(".png"),
         "csv": out_stem.parent / f"{stem}_table.csv",
     }
+
+
+def run_archetype_os_cohort_forest(
+    pred: pd.DataFrame,
+    out_dir: Path | str,
+    *,
+    adata=None,
+    external_csv: Path | str | None = None,
+    inject: bool = False,
+    write_adata_path: Path | str | None = None,
+    also_external_only: bool = True,
+    show: bool = True,
+    repo_root: Path | str | None = None,
+    write_supplementary: bool = True,
+) -> dict[str, object]:
+    """Recompute internal Validation, keep external cohorts, plot meta-analysis forest.
+
+    Parameters
+    ----------
+    inject
+        If True, write the updated study table into ``adata.uns['validation_cohort']``.
+    also_external_only
+        Also write an external-cohorts-only forest (Schmitz/Chapuy/Ennishi + Overall).
+    """
+    from .dlbcl_io import log_saved, log_wrote, write_registered_supplementary_table
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    validation_row = compute_validation_rest_vs_di_os_row(pred)
+    studies = load_archetype_os_forest_studies(adata=adata, csv_path=external_csv)
+    studies = merge_validation_into_archetype_os_forest(studies, validation_row)
+
+    if inject:
+        if adata is None:
+            raise ValueError("inject=True requires adata")
+        inject_archetype_os_forest_into_adata(adata, studies)
+        if write_adata_path is not None:
+            adata.write_h5ad(Path(write_adata_path))
+
+    # Persist study-level table (no Overall) next to figures for provenance.
+    studies_csv = out_dir / "archetype_os_forest_studies.csv"
+    studies.to_csv(studies_csv, index=False)
+
+    forest_df = build_archetype_os_benchmark_forest_df(studies, include_pooled=True)
+    paths = save_archetype_os_benchmark_forest(forest_df, out_dir, show=show)
+    log_wrote(paths["svg"], Path(repo_root) if repo_root else None)
+
+    results: dict[str, object] = {
+        "studies": studies,
+        "forest": forest_df,
+        "validation_row": validation_row,
+        "paths": paths,
+        "studies_csv": studies_csv,
+    }
+
+    if also_external_only:
+        external = studies.loc[studies["dataset"].isin(EXTERNAL_ARCHETYPE_OS_DATASETS)].copy()
+        if not external.empty:
+            ext_forest = build_archetype_os_benchmark_forest_df(external, include_pooled=True)
+            ext_paths = save_archetype_os_benchmark_forest(
+                ext_forest,
+                out_dir,
+                stem="fig5E_archetype_os_external_forest",
+                title=ARCHETYPE_OS_FOREST_TITLE,
+                subtitle=f"{ARCHETYPE_OS_FOREST_SUBTITLE} (external cohorts)",
+                show=show,
+            )
+            log_wrote(ext_paths["svg"], Path(repo_root) if repo_root else None)
+            results["external_forest"] = ext_forest
+            results["external_paths"] = ext_paths
+
+    if write_supplementary and repo_root is not None:
+        log_saved(
+            write_registered_supplementary_table(forest_df, Path(repo_root), "5E_os_forest"),
+            Path(repo_root),
+        )
+
+    return results

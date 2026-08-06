@@ -22,8 +22,8 @@ DISCOVERY_CLASSIFICATION_COLUMNS = (
     "Ciav_Cluster",
     "KotlovSig",
     "COO_NanoString",
-    "abundance_cluster_30",
-    "abundance_cluster_30_label",
+    "tumorimmune_archetype_id",
+    "tumorimmune_archetype",
 )
 
 # Workbook column names mapped to discovery-aligned names in case_classification_validation.
@@ -164,14 +164,14 @@ def apply_trained_classifier_archetypes(
     if "trained_classifier" in clf.columns:
         trained = pd.to_numeric(clf["trained_classifier"], errors="coerce").reindex(out.index)
         if trained.notna().any():
-            out["pred_abundance_cluster_30"] = trained.combine_first(
-                pd.to_numeric(out.get("pred_abundance_cluster_30"), errors="coerce")
+            out["pred_tumorimmune_archetype_id"] = trained.combine_first(
+                pd.to_numeric(out.get("pred_tumorimmune_archetype_id"), errors="coerce")
             )
     if "trained_classifier_label" in clf.columns:
         labels = clf["trained_classifier_label"].reindex(out.index)
         if labels.notna().any():
-            out["pred_abundance_cluster_30_label"] = labels.combine_first(
-                out.get("pred_abundance_cluster_30_label")
+            out["pred_tumorimmune_archetype"] = labels.combine_first(
+                out.get("pred_tumorimmune_archetype")
             )
     if "trained_classifier_max_probability" in clf.columns:
         max_prob = pd.to_numeric(clf["trained_classifier_max_probability"], errors="coerce").reindex(
@@ -199,13 +199,13 @@ def build_case_classification_validation(
     out["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
 
     # Archetype: nb5 elastic-net on validation GEP (not external trained_classifier TSV).
-    out["abundance_cluster_30"] = pd.to_numeric(
-        pred["pred_abundance_cluster_30"], errors="coerce"
+    out["tumorimmune_archetype_id"] = pd.to_numeric(
+        pred["pred_tumorimmune_archetype_id"], errors="coerce"
     ).astype("Int64")
-    if "pred_abundance_cluster_30_label" in pred.columns:
-        out["abundance_cluster_30_label"] = pred["pred_abundance_cluster_30_label"].reindex(pred_idx)
+    if "pred_tumorimmune_archetype" in pred.columns:
+        out["tumorimmune_archetype"] = pred["pred_tumorimmune_archetype"].reindex(pred_idx)
     else:
-        out["abundance_cluster_30_label"] = out["abundance_cluster_30"].map(ARCHETYPE_NAME_MAP)
+        out["tumorimmune_archetype"] = out["tumorimmune_archetype_id"].map(ARCHETYPE_NAME_MAP)
 
     for dst_col in ("Ciav_Cluster", "COO_NanoString", "KotlovSig", "Lymphoma_Ecotype", "New_Ecotype"):
         out[dst_col] = pd.NA

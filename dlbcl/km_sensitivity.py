@@ -55,7 +55,7 @@ def build_discovery_km_survival_table(adata, paths: NotebookPaths) -> pd.DataFra
 
     arch_df = load_archetype_assignments(paths)
     cluster_dict = dict(
-        zip(arch_df["patient_id"].astype(str), arch_df["abundance_cluster_30"].astype(int))
+        zip(arch_df["patient_id"].astype(str), arch_df["tumorimmune_archetype_id"].astype(int))
     )
 
     clinical = _patient_frame(adata_sub, "case_clinical")

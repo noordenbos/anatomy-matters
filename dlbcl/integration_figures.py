@@ -254,10 +254,10 @@ def build_integration_metadata(
         meta = meta.loc[meta["genomic_tested"]].copy()
 
     cluster_dict = dict(
-        zip(arch_df["patient_id"].astype(str), arch_df["abundance_cluster_30"].astype(int))
+        zip(arch_df["patient_id"].astype(str), arch_df["tumorimmune_archetype_id"].astype(int))
     )
-    meta["abundance_cluster_30"] = meta.index.map(cluster_dict)
-    meta["abundance_cluster_30_label"] = meta["abundance_cluster_30"].map(ARCHETYPE_NAME_MAP)
+    meta["tumorimmune_archetype_id"] = meta.index.map(cluster_dict)
+    meta["tumorimmune_archetype"] = meta["tumorimmune_archetype_id"].map(ARCHETYPE_NAME_MAP)
 
     for old_col, new_col in COLUMN_ALIASES.items():
         if old_col in meta.columns:
@@ -328,7 +328,7 @@ def circos_ring_sort_columns(df: pd.DataFrame) -> list[str]:
     Must match the ring order in ``plot_donut_circos`` (center → outermost) so
     each ring shows contiguous segments within its parent blocks.
     """
-    spatial_col = "abundance_cluster_30_label"
+    spatial_col = "tumorimmune_archetype"
     ringplan_cols = [
         "Location",
         spatial_col,
@@ -499,7 +499,7 @@ def plot_donut_circos(
     configure_matplotlib()
     work = df.copy()
     column_mapping = {
-        "abundance_cluster_30_label": "Tumor Immune Archetype\n(this work)",
+        "tumorimmune_archetype": "Tumor Immune Archetype\n(this work)",
         HLA_CLASS_STATE_COL: HLA_CLASS_STATE_LABEL,
         "lymphomap": "Li 2025\nLymphoMAP",
         "Lymphoma_Ecotype": "Steen 2021\nLymphoma_Ecotype",
@@ -673,7 +673,7 @@ def plot_donut_circos(
 
 
 def _association_metrics(df: pd.DataFrame, *, stratifier: str) -> tuple[list[str], dict[str, str]]:
-    spatial_col = "abundance_cluster_30_label"
+    spatial_col = "tumorimmune_archetype"
     if stratifier == "location":
         metrics = [
             spatial_col,
@@ -987,7 +987,7 @@ ASSOCIATION_DUMBBELL_SHORT_LABELS: dict[str, str] = {
 }
 
 CLASSIFIER_PAIRWISE_COLUMNS: list[tuple[str, str]] = [
-    ("abundance_cluster_30_label", "This work"),
+    ("tumorimmune_archetype", "This work"),
     ("Location", "Tumor Location"),
     (HLA_CLASS_STATE_COL, HLA_CLASS_STATE_DISPLAY),
     ("KotlovSig", "Kotlov 2021 LME"),
@@ -1363,7 +1363,7 @@ def run_association_analysis(
 ) -> pd.DataFrame:
     """Global + pairwise association tests vs Location or archetype (spatial protein)."""
     df = _genomic_classifier_cohort(df)
-    strat_col = "Location" if stratifier == "location" else "abundance_cluster_30_label"
+    strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1551,13 +1551,19 @@ def _drop_nonspecific_crosstab_levels(table: pd.DataFrame) -> pd.DataFrame:
 # Global association barchart: require at least this Cramér's V to highlight FDR significance.
 CRAMER_V_HIGHLIGHT_MIN = 0.15
 
-# Drop classifier levels with fewer than this many patients before global chi-square tests.
+# Drop classifier levels with fewer than this many patients before global chi-square tests
+# (Fig 4B association bars / pairwise). Enrichment dotplots (Fig 4C/D) keep all levels
+# except explicit excludes — see ``compute_group_enrichment_table``.
 MIN_CLASSIFIER_LEVEL_N = 10
 
 # Sparse subtype pooling (Lymphgen has many low-count classes in n=61 discovery cohort).
 MIN_CLASSIFIER_LEVEL_N_BY_METRIC: dict[str, int] = {
     "Wright 2020 Lymphgen": 5,
 }
+
+# Enrichment dotplots: keep rare levels (n≥1). Explicit METRIC_FEATURE_EXCLUDE / skip
+# labels (Other, unknown, …) are still masked.
+MIN_CLASSIFIER_LEVEL_N_ENRICHMENT = 1
 
 # Classifier panels omitted from enrichment dotplots (Fig 4C/D only; still in Fig 4B).
 METRIC_PANEL_EXCLUDE: frozenset[str] = frozenset({
@@ -1577,13 +1583,13 @@ METRIC_PANEL_ORDER: list[str] = [
     "Shen 2023 LymphPlex",
     "Steen 2021 EcoTyper (confident)",
     "Steen 2021 EcoTyper (best match)",
-    "Spatial Protein",
+    "This work",
     "Tumor Location",
 ]
 
 # Panels shown only for one stratifier (location columns vs archetype columns).
 METRIC_PANEL_STRATIFIER: dict[str, str] = {
-    "Spatial Protein": "location",
+    "This work": "location",
     "Tumor Location": "archetype",
 }
 
@@ -1596,7 +1602,7 @@ METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     "Chapuy 2025 DLBclass": ["C1", "C2", "C3", "C4", "C5"],
     "Ciavarella 2018 Cluster": ["Cold", "Intermediate", "Hot"],
     "Kotlov 2021 LME": ["Depleted", "Inflammatory", "Mesenchymal", "GC-like"],
-    "Spatial Protein": ["low immune", "cytotoxic predominant", "complex immune"],
+    "This work": ["low immune", "cytotoxic predominant", "complex immune"],
     "Steen 2021 Lymphoma Ecotype": _STEEN_ECOTYPE_LEVELS,
     "Steen 2021 EcoTyper (confident)": _STEEN_ECOTYPE_LEVELS,
     "Steen 2021 EcoTyper (best match)": _STEEN_ECOTYPE_LEVELS,
@@ -1693,13 +1699,18 @@ def compute_group_enrichment_table(
     df: pd.DataFrame,
     *,
     stratifier: str,
+    min_level_n: int = MIN_CLASSIFIER_LEVEL_N_ENRICHMENT,
 ) -> pd.DataFrame:
     """Per-feature enrichment in each location or archetype (feature vs rest, Fisher OR).
 
     FDR is Benjamini–Hochberg **within each classifier** (not across the full dotplot).
+
+    Unlike global association tests (Fig 4B), rare classifier levels are kept by default
+    (``min_level_n=1``) so every observed subtype appears as a row in Fig 4C/4D.
+    Catch-all labels in ``METRIC_FEATURE_EXCLUDE`` / ``_SKIP_FEATURE_VALUES`` are still omitted.
     """
     df = _genomic_classifier_cohort(df)
-    strat_col = "Location" if stratifier == "location" else "abundance_cluster_30_label"
+    strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
 
     groups = _ordered_groups(df[strat_col].dropna().astype(str).unique().tolist(), stratifier=stratifier)
@@ -1708,7 +1719,10 @@ def compute_group_enrichment_table(
     for metric in metrics:
         metric_label = display_names[metric]
         metric_series = _prepare_classifier_series(
-            df[metric], metric_label, strat_series=df[strat_col]
+            df[metric],
+            metric_label,
+            strat_series=df[strat_col],
+            min_level_n=min_level_n,
         )
         valid = metric_series.notna()
         strat_valid = df.loc[valid, strat_col].astype(str)

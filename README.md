@@ -4,7 +4,7 @@ Code and notebooks to reproduce the figures in our manuscript (preprint; journal
 
 Notebooks are committed **with inline outputs**, so you can browse results without re-running.
 We do invite reviewers/editors/public to rerun the notebooks as a fully reproducible pipeline, this process is simplified to 2 simple steps to lower participation threshold.
-There are eleven independent Jupyter notebooks (`fig1`–`fig6`, `supplemental_fig1`–`supplemental_fig5`) which read the same single AnnData file (~600MB), that is automatically pulled from zenodo. 
+There are twelve independent Jupyter notebooks (`fig1`–`fig6`, `table1`, `supplemental_fig1`–`supplemental_fig5`) which read the same single AnnData file (~600MB), that is automatically pulled from zenodo. 
 
 ---
 
@@ -142,6 +142,7 @@ ZIP checkouts are fine for reproduction; you just will not receive `git pull` up
 | `fig4.ipynb` | Fig 4 | Discovery integration (circos, associations, enrichment) |
 | `fig5.ipynb` | Fig 5 | Elastic-net classifier, validation survival/Cox |
 | `fig6.ipynb` | Fig 6 | Validation integration |
+| `table1.ipynb` | Table 1 | Clinical characteristics (discovery + validation) |
 | `supplemental_fig1.ipynb` | Fig S1 | Genomic oncoprint (needs R) |
 | `supplemental_fig2.ipynb` | Fig S2 | Modality matrix, QC tSNE, compartment tSNEs, protein heatmaps |
 | `supplemental_fig3.ipynb` | Fig S3 | Gene–protein validation, PCA, HLA panels, classifier tSNEs |
@@ -168,7 +169,7 @@ figures/            # SVG/PNG outputs (created when you run notebooks)
 
 Single file: **`data/DLBCL_location_2026.h5ad`**. It contains single-cell protein data, patient-level expression/metadata, spatial masks, OMIQ tSNE coordinates, genomic profiling tables, and the embedded validation cohort (`uns['validation_cohort']`, aliases `V1`…).
 
-Immune archetype labels and genomic classifier columns live in `adata.uns` — no separate CSV files are required. Override the data root with `DLBCL_DATA_DIR` if needed.
+Tumor–immune archetype labels (`tumorimmune_archetype` / `tumorimmune_archetype_id`) and genomic classifier columns live in `adata.uns` — no separate CSV files are required. Override the data root with `DLBCL_DATA_DIR` if needed.
 
 When notebooks are re-run, plot source tables export to `data/supplementary/{fig_id}/` (gitignored).
 

@@ -40,6 +40,7 @@ FIGURE_NOTEBOOKS: tuple[str, ...] = (
     "fig4.ipynb",
     "fig5.ipynb",
     "fig6.ipynb",
+    "table1.ipynb",
     "supplemental_fig1.ipynb",
     "supplemental_fig2.ipynb",
     "supplemental_fig3.ipynb",

@@ -17,7 +17,7 @@ UNKNOWN_TOKENS = frozenset({"unknown", "unk", "na", "nan", ""})
 
 # (metadata column, display title for column header / palette key)
 MOLECULAR_COLUMN_SPECS: list[tuple[str, str]] = [
-    ("abundance_cluster_30_label", "Spatial Protein"),
+    ("tumorimmune_archetype", "Spatial Protein"),
     ("COO_NanoString", "Cell of Origin"),
     ("Ciav_Cluster", "Ciavarella 2018\nCluster"),
     ("Lymphoma_Ecotype", "Steen 2021\nLymphoma_Ecotype"),
@@ -92,8 +92,8 @@ def build_palette(values: list[str]) -> dict[str, str]:
 GENOMIC_CLASSIFIER_COLS = ("DLBclass", "Lymphgen", "HMRN", "LymphPlex")
 GENOMIC_STACKED_BAR_COLS = ("Lymphgen", "DLBclass", "HMRN", "LymphPlex")
 LYMPHGEN_DLBCLASS_COLS = ("Lymphgen", "DLBclass")
-SUPPLEMENTARY_DROP_COLS = ("abundance_cluster", "abundance_cluster_30")
-ARCHETYPE_LABEL_COL = "abundance_cluster_30_label"
+SUPPLEMENTARY_DROP_COLS = ("tumorimmune_archetype_id",)
+ARCHETYPE_LABEL_COL = "tumorimmune_archetype"
 ARCHETYPE_DISPLAY_COL = "tumor immune archetype (this work)"
 
 

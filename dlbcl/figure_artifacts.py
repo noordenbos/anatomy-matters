@@ -82,7 +82,7 @@ FIGURE_ARTIFACTS: dict[str, FigureArtifactSpec] = {
 # Legacy figure filename stems → canonical (longest-match first when applying).
 LEGACY_FIGURE_STEMS: dict[str, str] = {
     "clustered_heatmap_20032026": "fig2E_archetype_density_heatmap",
-    "gsea_dotplot_abundance_cluster_30_patientlevel": "fig3O_gsea_archetypes_hallmark",
+    "gsea_dotplot_tumorimmune_archetype_patientlevel": "fig3O_gsea_archetypes_hallmark",
     "ecotyper_b_state_by_archetype": "fig3M_ecotyper_b_state_by_archetype",
     "HLAABC_HLADR_grouped_stacked_with_stats": "figS3E_HLA_archetype_stacked",
     "heatmap_top_class_driving_genes": "fig3D_top_class_drivers_heatmap",
@@ -130,7 +130,7 @@ LEGACY_FIGURE_STEMS: dict[str, str] = {
     "fig3O_val_gsea_dotplot": "figS5D_val_gsea_dotplot",
     "fig3O_val_gsea_long": "figS5D_val_gsea_long",
     # Sensitivity KM SVG (supp table already renamed)
-    "fig5A_val_km_os_archetype_no_pcns": "figS4B_val_km_os_archetype_no_pcns",
+    "fig5A_val_km_os_archetype_no_pcns": "figS4D_val_km_os_archetype_no_pcns",
     "fig2F_km_os_archetype_no_outliers": "figS4_supp_km_os_archetype_no_outliers",
     "fig2G_km_dss_archetype_no_outliers": "figS4_supp_km_dss_archetype_no_outliers",
 }

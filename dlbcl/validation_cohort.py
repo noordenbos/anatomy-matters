@@ -366,7 +366,7 @@ def cohort_notebook_inputs(adata) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series
         )
     pred = _as_dataframe(vc["predictions"], index_col="patient_alias")
     pred.index = pred.index.astype(str)
-    labels = pred["pred_abundance_cluster_30_label"].astype(str)
+    labels = pred["pred_tumorimmune_archetype"].astype(str)
     return pred, gep, labels
 
 
@@ -493,8 +493,8 @@ def predict_validation_archetypes(
 
     out = pd.DataFrame(index=x.index)
     out.index.name = "patient_alias"
-    out["pred_abundance_cluster_30"] = pred_class
-    out["pred_abundance_cluster_30_label"] = out["pred_abundance_cluster_30"].map(ARCHETYPE_LABELS)
+    out["pred_tumorimmune_archetype_id"] = pred_class
+    out["pred_tumorimmune_archetype"] = out["pred_tumorimmune_archetype_id"].map(ARCHETYPE_LABELS)
     for i, cls in enumerate(class_names):
         out[f"prob_{cls}"] = proba[:, i]
     out["max_prob"] = proba.max(axis=1)

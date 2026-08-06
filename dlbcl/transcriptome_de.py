@@ -362,25 +362,25 @@ def _discovery_metadata(adata, paths: NotebookPaths | None, patient_subset: list
     meta["patient_id"] = meta["patient_id"].astype(str).str.strip()
     meta = meta.drop_duplicates("patient_id").set_index("patient_id")
 
-    if "abundance_cluster_30_label" not in meta.columns and "abundance_cluster_30" not in meta.columns:
+    if "tumorimmune_archetype" not in meta.columns and "tumorimmune_archetype_id" not in meta.columns:
         if paths is None:
             raise KeyError(
-                "Discovery metadata lacks abundance_cluster_30(_label); pass paths with "
-                "data/processed/abundance_cluster_30_assignments.csv available."
+                "Discovery metadata lacks tumorimmune_archetype / tumorimmune_archetype_id; pass paths with "
+                "data/processed/tumorimmune_archetype_assignments.csv available."
             )
         arch = load_archetype_assignments(paths)
         arch = arch.copy()
         arch["patient_id"] = arch["patient_id"].astype(str)
         meta = meta.join(
-            arch.set_index("patient_id")[["abundance_cluster_30", "abundance_cluster_30_label"]],
+            arch.set_index("patient_id")[["tumorimmune_archetype_id", "tumorimmune_archetype"]],
             how="left",
         )
 
-    if "abundance_cluster_30_label" in meta.columns:
-        meta["Archetype"] = meta["abundance_cluster_30_label"].map(canonical_archetype)
+    if "tumorimmune_archetype" in meta.columns:
+        meta["Archetype"] = meta["tumorimmune_archetype"].map(canonical_archetype)
     else:
-        label_map = {1: "low immune", 2: "cytotoxic predominant", 3: "diverse immune"}
-        meta["Archetype"] = pd.to_numeric(meta["abundance_cluster_30"], errors="coerce").map(label_map)
+        label_map = {1: "low immune", 2: "cytotoxic predominant", 3: "complex immune"}
+        meta["Archetype"] = pd.to_numeric(meta["tumorimmune_archetype_id"], errors="coerce").map(label_map)
 
     loc_source = "Location" if "Location" in meta.columns else "disease_type"
     meta["Location"] = meta[loc_source].map(DISCOVERY_LOCATION_RECODE).fillna(meta[loc_source])

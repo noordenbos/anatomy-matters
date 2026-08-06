@@ -37,11 +37,22 @@ ARCHETYPE_DISCOVERY_EXCLUDE_PATIENT_IDS = frozenset({
     "Tonsil481",
 })
 
+# Numeric tumor–immune archetype ids (1–3) → display labels.
 CLUSTER_NAME_MAP = {
-    0: "low immune",
-    1: "cytotoxic predominant",
-    2: "complex immune",
+    1: "low immune",
+    2: "cytotoxic predominant",
+    3: "complex immune",
 }
+
+TUMORIMMUNE_ARCHETYPE_ID_COL = "tumorimmune_archetype_id"
+TUMORIMMUNE_ARCHETYPE_COL = "tumorimmune_archetype"
+TUMORIMMUNE_ARCHETYPE_UNS_KEY = "tumorimmune_archetype_id"
+PRED_TUMORIMMUNE_ARCHETYPE_ID_COL = "pred_tumorimmune_archetype_id"
+PRED_TUMORIMMUNE_ARCHETYPE_COL = "pred_tumorimmune_archetype"
+
+# Legacy names accepted when reading older AnnData / CSV sidecars.
+_LEGACY_ARCHETYPE_ID_COLS = ("tumorimmune_archetype_id", "abundance_cluster_30")
+_LEGACY_ARCHETYPE_LABEL_COLS = ("tumorimmune_archetype", "abundance_cluster_30_label")
 
 
 def is_archetype_discovery_excluded(patient_id: str) -> bool:
@@ -90,7 +101,7 @@ def get_paths(repo_root: Path | None = None, *, notebook: str) -> NotebookPaths:
         processed_dir=processed,
         fig_dir=root / "figures" / notebook,
         adata_path=resolve_adata_path(data_dir),
-        arch_path=processed / "abundance_cluster_30_assignments.csv",
+        arch_path=processed / "tumorimmune_archetype_assignments.csv",
     )
 
 
@@ -183,39 +194,69 @@ def load_omiq_tsne(adata: ad.AnnData, compartment: str) -> pd.DataFrame:
     return df
 
 
+
+def normalize_archetype_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename legacy archetype columns to tumorimmune_archetype(_id)."""
+    out = df.copy()
+    rename: dict[str, str] = {}
+    if TUMORIMMUNE_ARCHETYPE_ID_COL not in out.columns:
+        for col in _LEGACY_ARCHETYPE_ID_COLS:
+            if col in out.columns and col != TUMORIMMUNE_ARCHETYPE_ID_COL:
+                rename[col] = TUMORIMMUNE_ARCHETYPE_ID_COL
+                break
+    if TUMORIMMUNE_ARCHETYPE_COL not in out.columns:
+        for col in _LEGACY_ARCHETYPE_LABEL_COLS:
+            if col in out.columns and col != TUMORIMMUNE_ARCHETYPE_COL:
+                rename[col] = TUMORIMMUNE_ARCHETYPE_COL
+                break
+    if rename:
+        out = out.rename(columns=rename)
+    # Drop stale misaligned string column if present alongside the canonical label.
+    if "abundance_cluster" in out.columns and TUMORIMMUNE_ARCHETYPE_COL in out.columns:
+        out = out.drop(columns=["abundance_cluster"])
+    if TUMORIMMUNE_ARCHETYPE_ID_COL in out.columns and TUMORIMMUNE_ARCHETYPE_COL not in out.columns:
+        out[TUMORIMMUNE_ARCHETYPE_COL] = pd.to_numeric(
+            out[TUMORIMMUNE_ARCHETYPE_ID_COL], errors="coerce"
+        ).map(CLUSTER_NAME_MAP)
+    return out
+
+
 def archetype_assignments_from_adata(adata: ad.AnnData) -> pd.DataFrame | None:
     """Build archetype assignment table from embedded ``adata.uns`` (Zenodo fallback)."""
     rows: list[dict[str, object]] | None = None
     if "case_classifications" in adata.uns:
-        cc = pd.DataFrame(adata.uns["case_classifications"]).copy()
-        if "abundance_cluster_30" in cc.columns:
+        cc = normalize_archetype_frame(pd.DataFrame(adata.uns["case_classifications"]))
+        if "tumorimmune_archetype_id" in cc.columns:
             if "patient_id" in cc.columns:
-                out = cc[["patient_id", "abundance_cluster_30"]].copy()
+                out = cc[["patient_id", "tumorimmune_archetype_id"]].copy()
                 out["patient_id"] = out["patient_id"].astype(str)
             else:
-                out = cc[["abundance_cluster_30"]].copy()
+                out = cc[["tumorimmune_archetype_id"]].copy()
                 out.insert(0, "patient_id", cc.index.astype(str))
-            if "abundance_cluster_30_label" in cc.columns:
-                out["abundance_cluster_30_label"] = cc["abundance_cluster_30_label"]
-            rows = out.dropna(subset=["abundance_cluster_30"]).to_dict("records")
+            if "tumorimmune_archetype" in cc.columns:
+                out["tumorimmune_archetype"] = cc["tumorimmune_archetype"]
+            rows = out.dropna(subset=["tumorimmune_archetype_id"]).to_dict("records")
 
-    if rows is None and isinstance(adata.uns.get("abundance_cluster_30"), dict):
-        cluster_dict = adata.uns["abundance_cluster_30"]
-        rows = [
-            {"patient_id": str(pid), "abundance_cluster_30": int(clu)}
-            for pid, clu in cluster_dict.items()
-            if pd.notna(clu)
-        ]
+    if rows is None:
+        cluster_dict = adata.uns.get("tumorimmune_archetype_id")
+        if not isinstance(cluster_dict, dict):
+            cluster_dict = adata.uns.get("abundance_cluster_30")
+        if isinstance(cluster_dict, dict):
+            rows = [
+                {"patient_id": str(pid), "tumorimmune_archetype_id": int(clu)}
+                for pid, clu in cluster_dict.items()
+                if pd.notna(clu)
+            ]
 
     if not rows:
         return None
     df = pd.DataFrame(rows)
     df["patient_id"] = df["patient_id"].astype(str)
-    df["abundance_cluster_30"] = pd.to_numeric(df["abundance_cluster_30"], errors="coerce")
-    df = df.dropna(subset=["abundance_cluster_30"])
-    df["abundance_cluster_30"] = df["abundance_cluster_30"].astype(int)
-    if "abundance_cluster_30_label" not in df.columns:
-        df["abundance_cluster_30_label"] = df["abundance_cluster_30"].map(CLUSTER_NAME_MAP)
+    df["tumorimmune_archetype_id"] = pd.to_numeric(df["tumorimmune_archetype_id"], errors="coerce")
+    df = df.dropna(subset=["tumorimmune_archetype_id"])
+    df["tumorimmune_archetype_id"] = df["tumorimmune_archetype_id"].astype(int)
+    if "tumorimmune_archetype" not in df.columns:
+        df["tumorimmune_archetype"] = df["tumorimmune_archetype_id"].map(CLUSTER_NAME_MAP)
     return df.reset_index(drop=True)
 
 
@@ -240,11 +281,14 @@ def load_archetype_assignments(
         except Exception:
             pass
     if paths.arch_path.exists():
-        return pd.read_csv(paths.arch_path)
+        return normalize_archetype_frame(pd.read_csv(paths.arch_path))
+    legacy_csv = paths.processed_dir / "abundance_cluster_30_assignments.csv"
+    if legacy_csv.exists():
+        return normalize_archetype_frame(pd.read_csv(legacy_csv))
     if required:
         raise FileNotFoundError(
             "Archetype assignments not found in adata.uns['case_classifications'] "
-            f"(columns abundance_cluster_30 / abundance_cluster_30_label) "
+            f"(columns tumorimmune_archetype_id / tumorimmune_archetype) "
             f"and no fallback CSV at {rel_path(paths.arch_path, paths.repo_root)}.\n"
             "Use the published DLBCL_location_2026.h5ad bundle, or pass adata= to "
             "load_archetype_assignments() / call ensure_discovery_archetypes()."
@@ -267,17 +311,17 @@ def inject_archetypes_into_adata(
     arch_df: pd.DataFrame,
 ) -> ad.AnnData:
     """Sync archetype assignments into ``adata.uns`` for downstream panels."""
-    cluster_dict = dict(zip(arch_df["patient_id"].astype(str), arch_df["abundance_cluster_30"].astype(int)))
-    adata.uns["abundance_cluster_30"] = cluster_dict
+    cluster_dict = dict(zip(arch_df["patient_id"].astype(str), arch_df["tumorimmune_archetype_id"].astype(int)))
+    adata.uns["tumorimmune_archetype_id"] = cluster_dict
 
     cc = pd.DataFrame(adata.uns["case_classifications"]).copy()
     if "patient_id" in cc.columns:
         idx = cc["patient_id"].astype(str)
     else:
         idx = cc.index.astype(str)
-    cc["abundance_cluster_30"] = idx.map(cluster_dict).values
-    if "abundance_cluster_30_label" not in cc.columns or cc["abundance_cluster_30_label"].isna().all():
-        cc["abundance_cluster_30_label"] = cc["abundance_cluster_30"].map(CLUSTER_NAME_MAP)
+    cc["tumorimmune_archetype_id"] = idx.map(cluster_dict).values
+    if "tumorimmune_archetype" not in cc.columns or cc["tumorimmune_archetype"].isna().all():
+        cc["tumorimmune_archetype"] = cc["tumorimmune_archetype_id"].map(CLUSTER_NAME_MAP)
     adata.uns["case_classifications"] = cc
     return adata
 
@@ -665,6 +709,10 @@ DROP_CLASSIFICATION_SOURCES = frozenset(
     | set(GENOMIC_LEGACY_FALLBACK)
     | {
         "LymphGen_lymphotyper_panel",
+        # Stale / superseded archetype columns (prefer tumorimmune_archetype*).
+        "abundance_cluster",
+        "abundance_cluster_30",
+        "abundance_cluster_30_label",
     }
 )
 
@@ -689,6 +737,7 @@ def consolidate_case_classifications(
     from .validation_classifications import finalize_lymphoma_ecotype_columns
 
     out = finalize_lymphoma_ecotype_columns(out)
+    out = normalize_archetype_frame(out)
     drop = [c for c in DROP_CLASSIFICATION_SOURCES if c in out.columns]
     return out.drop(columns=drop)
 

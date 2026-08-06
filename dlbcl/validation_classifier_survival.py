@@ -63,7 +63,7 @@ class ClassifierSpec:
 
 
 CLASSIFIER_SPECS: tuple[ClassifierSpec, ...] = (
-    ClassifierSpec("abundance_cluster_30_label", "This work (immune archetype)", "gep", "complex immune"),
+    ClassifierSpec("tumorimmune_archetype", "This work (immune archetype)", "gep", "complex immune"),
     ClassifierSpec("lymphomap", "Li 2025 LymphoMAP", "gep", "LN"),
     ClassifierSpec("Ciav_Cluster", "Ciavarella 2018 Cluster", "gep", "Cold"),
     ClassifierSpec("KotlovSig", "Kotlov 2021 LME", "gep", "Depleted"),
@@ -155,35 +155,39 @@ def _coerce_ipi_baseline(
     *,
     location: pd.Series | None = None,
 ) -> pd.Series:
-    """Map workbook IPI strings to discovery table buckets (0–1 vs >3; PCNSL → >3)."""
+    """Deprecated shim: prefer ``validation_ipi.assign_ipi_ielsg_buckets``.
+
+    Kept for callers that only have a raw score series. Maps to primary buckets
+    ``0-2`` vs ``>=3``. Does **not** force PCNSL to high risk.
+    """
+    from .validation_ipi import BUCKET_PRIMARY_HIGH, BUCKET_PRIMARY_LOW
+
     out = pd.Series(pd.NA, index=ipi.index, dtype=object)
-    loc = location.reindex(ipi.index) if location is not None else None
     for idx, value in ipi.items():
-        if _ipi_value_missing(value):
-            if loc is not None and _is_pcnsl_location(loc.get(idx)):
-                out[idx] = ">3"
+        if value is None or (isinstance(value, float) and pd.isna(value)):
             continue
         text = str(value).strip().lower()
-        if "low-risk" in text or text in {"0", "1", "0-1"}:
-            out[idx] = "0-1"
-        elif "high-risk" in text or text in {"2", "3", "4", "5", "2-5"}:
-            out[idx] = ">3"
-        else:
-            num = pd.to_numeric(value, errors="coerce")
-            if pd.notna(num):
-                out[idx] = "0-1" if float(num) <= 1 else ">3"
+        if text == "" or text in {"nan", "none", "na", "unk", "unknown", "<na>"}:
+            continue
+        if "low-risk" in text or text in {"0", "1", "0-1", "0-2"}:
+            out[idx] = BUCKET_PRIMARY_LOW
+            continue
+        if text in {"3", "4", "5", ">=3", ">3"}:
+            out[idx] = BUCKET_PRIMARY_HIGH
+            continue
+        if "high-risk" in text or text in {"2-5"}:
+            # Factor string spans both primary buckets (2 vs 3–5) — leave NA.
+            continue
+        num = pd.to_numeric(value, errors="coerce")
+        if pd.notna(num):
+            out[idx] = BUCKET_PRIMARY_LOW if float(num) <= 2 else BUCKET_PRIMARY_HIGH
     return out
-
-
-def _ipi_value_missing(value: object) -> bool:
-    if value is None or (isinstance(value, float) and pd.isna(value)):
-        return True
-    text = str(value).strip()
-    return text == "" or text.lower() in {"nan", "none", "na", "unk", "unknown", "<na>"}
 
 
 def _attach_optional_baseline(surv: pd.DataFrame, pred: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     """Add optional clinical covariates to ``surv`` when columns exist in ``pred``."""
+    from .validation_ipi import attach_ipi_ielsg_to_survival
+
     extra: list[str] = []
     out = surv.copy()
     pred = pred.copy()
@@ -203,17 +207,8 @@ def _attach_optional_baseline(surv: pd.DataFrame, pred: pd.DataFrame) -> tuple[p
             out["Ann_Arbor"] = stage
             extra.append("Ann_Arbor")
 
-    ipi_col = _first_column(pred, OPTIONAL_BASELINE_CANDIDATES["IPI_score"])
-    if ipi_col is not None:
-        ipi_raw = pred[ipi_col].reindex(out.index)
-        ipi_mapped = _coerce_ipi_baseline(ipi_raw, location=out.get("Location"))
-        if ipi_mapped.notna().any():
-            out["IPI_score"] = pd.Categorical(
-                ipi_mapped,
-                categories=["0-1", ">3"],
-                ordered=False,
-            )
-            extra.append("IPI_score")
+    out, ipi_extra = attach_ipi_ielsg_to_survival(out, pred, include_secondary=True)
+    extra.extend(ipi_extra)
 
     return out, extra
 

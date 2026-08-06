@@ -87,7 +87,7 @@ def build_discovery_survival_table(
     surv["Location"] = classif["Location"].replace(LOCATION_RECODE)
 
     cluster_dict = dict(
-        zip(arch_df["patient_id"].astype(str), arch_df["abundance_cluster_30"].astype(int))
+        zip(arch_df["patient_id"].astype(str), arch_df["tumorimmune_archetype_id"].astype(int))
     )
     arch = pd.Series(cluster_dict, name="archetype_id")
     surv["archetype_id"] = arch

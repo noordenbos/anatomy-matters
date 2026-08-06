@@ -28,7 +28,7 @@ FIGURE_SUBDIRS: dict[str, tuple[str, ...]] = {
         "de_gene_expression",
         "immune_thelper_module_scores",
         "bcell_state_ecotyper",
-        "gsea_abundance_cluster_30_patientlevel",
+        "gsea_tumorimmune_archetype_patientlevel",
         "classifier_associations",
     ),
     "fig4": ("integration",),
@@ -40,6 +40,7 @@ FIGURE_SUBDIRS: dict[str, tuple[str, ...]] = {
         "classifier_os_benchmark",
     ),
     "supplemental_fig4": ("cox_clinical",),
+    "table1": (),
 }
 
 # Compiled notebooks that copy nb3 tSNE cells (need ADATA_PATH and filtering constants).
@@ -277,6 +278,27 @@ def setup_cell_source(profile: str, fig_id: str) -> list[str]:
                 "DOTPLOT_FIG_W = None\n",
                 "DOTPLOT_SHOW_GRID = False\n",
                 "configure_matplotlib()\n",
+            ]
+        )
+    if fig_id == "table1":
+        lines.extend(
+            [
+                "\n",
+                "from dlbcl.dlbcl_io import write_supplementary_table\n",
+                "from dlbcl.validation_clinical_table import (\n",
+                "    ClinicalTableConfig,\n",
+                "    LOCATION_ORDER,\n",
+                "    add_location_group,\n",
+                "    audit_validation_clinical_inputs,\n",
+                "    default_discovery_elements_path,\n",
+                "    export_patient_clinical_metadata_xlsx,\n",
+                "    load_validation_metadata,\n",
+                "    render_combined_great_table,\n",
+                "    run_combined_clinical_table,\n",
+                ")\n",
+                "\n",
+                "ELEMENTS_CSV = default_discovery_elements_path(REPO_ROOT)\n",
+                "METADATA_XLSX = OUTDIR / \"patient_clinical_metadata.xlsx\"\n",
             ]
         )
     if fig_id == "supplemental_fig1":

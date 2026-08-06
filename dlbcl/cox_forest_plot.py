@@ -164,7 +164,16 @@ def build_table_layout(
     return rows
 
 
-def _draw_forest_markers(ax, data_rows: list[_TableRow], *, log_x: bool) -> None:
+def _draw_forest_markers(
+    ax,
+    data_rows: list[_TableRow],
+    *,
+    log_x: bool,
+    study_marker: str = "s",
+    pooled_marker: str = "D",
+    study_marker_size: float = 5.0,
+    pooled_marker_size: float = 8.0,
+) -> None:
     for row in data_rows:
         yi = row.y
         if row.is_reference:
@@ -183,8 +192,8 @@ def _draw_forest_markers(ax, data_rows: list[_TableRow], *, log_x: bool) -> None
         if not np.isfinite(row.hr):
             ax.plot(np.nan, yi, marker="x", color=FOREST_MARKER, markersize=5.5, linestyle="none", zorder=4)
             continue
-        marker = "D" if row.is_pooled else "s"
-        marker_size = 8.0 if row.is_pooled else 5.0
+        marker = pooled_marker if row.is_pooled else study_marker
+        marker_size = pooled_marker_size if row.is_pooled else study_marker_size
         line_width = 2.0 if row.is_pooled else 1.4
         ax.errorbar(
             row.hr,
@@ -216,6 +225,9 @@ def _forest_xlim(data_rows: list[_TableRow], *, log_x: bool) -> tuple[float, flo
 
     lo = min(r.ci_lower for r in finite)
     hi = max(r.ci_upper for r in finite)
+    # Always keep the null HR=1 inside the axis so reference markers / ref line stay visible.
+    lo = min(lo, 1.0)
+    hi = max(hi, 1.0)
     if log_x:
         xmin = max(0.25, lo * 0.85)
         xmax = max(3.0, hi * 1.12)
@@ -460,16 +472,20 @@ def plot_cohort_hr_forest(
     n_col: str = "n",
     events_col: str = "Events",
     title: str | None = None,
+    subtitle: str | None = None,
     log_x: bool = True,
     figsize: tuple[float, float] | None = None,
     font_header: float = COHORT_FOREST_FONT_HEADER,
     font_body: float = COHORT_FOREST_FONT_BODY,
     font_axis: float = COHORT_FOREST_FONT_AXIS,
     font_title: float = COHORT_FOREST_FONT_TITLE,
+    font_subtitle: float | None = None,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Meta-analysis-style forest plot: one row per cohort with n, events, HR, and p."""
     if plot_df.empty:
         raise ValueError("plot_df is empty")
+    if font_subtitle is None:
+        font_subtitle = max(font_title - 3.0, 11.0)
 
     data_rows: list[_TableRow] = []
     y = 0.0
@@ -497,7 +513,8 @@ def plot_cohort_hr_forest(
     if figsize is None:
         figsize = (12.0, fig_h)
 
-    width_ratios = [1.6, 0.5, 0.58, 4.0, 2.0, 0.58]
+    width_ratios = [1.85, 0.5, 0.58, 4.0, 2.0, 0.58]
+    has_heading = bool(title or subtitle)
     fig = plt.figure(figsize=figsize)
     gs = gridspec.GridSpec(
         1,
@@ -507,7 +524,7 @@ def plot_cohort_hr_forest(
         wspace=0.08,
         left=0.05,
         right=0.98,
-        top=0.88 if title else 0.92,
+        top=0.82 if has_heading else 0.92,
         bottom=0.14,
     )
     ax_label = fig.add_subplot(gs[0, 0])
@@ -516,8 +533,10 @@ def plot_cohort_hr_forest(
     ax_forest = fig.add_subplot(gs[0, 3])
     ax_hr = fig.add_subplot(gs[0, 4])
     ax_p = fig.add_subplot(gs[0, 5])
+    text_axes = (ax_label, ax_n, ax_events, ax_hr, ax_p)
+    all_axes = (*text_axes, ax_forest)
 
-    for ax in (ax_label, ax_n, ax_events, ax_hr, ax_p):
+    for ax in text_axes:
         _style_text_axis(ax)
 
     ax_forest.set_ylim(-0.45, y_max)
@@ -540,12 +559,24 @@ def plot_cohort_hr_forest(
     else:
         ax_forest.set_xlim(xmin, xmax)
 
-    _draw_forest_markers(ax_forest, data_rows, log_x=log_x)
+    # Grey band behind the pooled Overall row (full table width).
+    for row in data_rows:
+        if not row.is_pooled:
+            continue
+        y0 = row.y - COHORT_FOREST_ROW_STEP * 0.42
+        y1 = row.y + COHORT_FOREST_ROW_STEP * 0.42
+        for ax in all_axes:
+            ax.axhspan(y0, y1, color=BAND_COLOR, zorder=0, linewidth=0)
 
-    pooled_rows = [r for r in data_rows if r.is_pooled]
-    if pooled_rows:
-        sep_y = pooled_rows[0].y + COHORT_FOREST_ROW_STEP / 2
-        ax_forest.axhline(sep_y, color="0.75", linewidth=0.9, zorder=1)
+    _draw_forest_markers(
+        ax_forest,
+        data_rows,
+        log_x=log_x,
+        study_marker="D",
+        pooled_marker="D",
+        study_marker_size=6.5,
+        pooled_marker_size=10.0,
+    )
 
     header_y = -0.18
     for ax, text, ha in (
@@ -593,11 +624,21 @@ def plot_cohort_hr_forest(
             0.5, yi, format_p_value(row.p), ha="center", va="center", fontsize=font_body, fontweight=weight, color=BODY_TEXT
         )
 
-    for ax in (ax_label, ax_n, ax_events, ax_hr, ax_p):
+    for ax in text_axes:
         ax.set_ylim(ax_forest.get_ylim())
 
     if title:
-        fig.suptitle(title, fontsize=font_title, y=0.98, ha="left", x=0.05)
+        fig.text(0.05, 0.97, title, fontsize=font_title, fontweight="bold", ha="left", va="top", color=HEADER_TEXT)
+    if subtitle:
+        fig.text(
+            0.05,
+            0.915 if title else 0.97,
+            subtitle,
+            fontsize=font_subtitle,
+            ha="left",
+            va="top",
+            color=BODY_TEXT,
+        )
 
     return fig, ax_forest
 
@@ -610,6 +651,7 @@ def save_cohort_hr_forest(
     n_col: str = "n",
     events_col: str = "Events",
     title: str | None = None,
+    subtitle: str | None = None,
     log_x: bool = True,
     include_pooled: bool = True,
     pooled_label: str = "Overall",
@@ -618,6 +660,7 @@ def save_cohort_hr_forest(
     font_body: float = COHORT_FOREST_FONT_BODY,
     font_axis: float = COHORT_FOREST_FONT_AXIS,
     font_title: float = COHORT_FOREST_FONT_TITLE,
+    font_subtitle: float | None = None,
 ) -> pd.DataFrame:
     """Write cohort forest figure (svg/png) and return ``plot_df``."""
     out_stem = Path(out_stem)
@@ -638,11 +681,13 @@ def save_cohort_hr_forest(
         n_col=n_col,
         events_col=events_col,
         title=title,
+        subtitle=subtitle,
         log_x=log_x,
         font_header=font_header,
         font_body=font_body,
         font_axis=font_axis,
         font_title=font_title,
+        font_subtitle=font_subtitle,
     )
     fig.savefig(out_stem.with_suffix(".svg"), bbox_inches="tight")
     fig.savefig(out_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")

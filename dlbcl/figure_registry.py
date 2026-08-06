@@ -126,6 +126,13 @@ SUPPLEMENTARY_TABLES: dict[str, SupplementaryTableSpec] = {
         "fig5A_val_km_os_archetype", "Fig 5A", "Validation KM OS by archetype", "nb14",
         role="input",
     ),
+    "5E_os_forest": SupplementaryTableSpec(
+        "fig5E_archetype_os_cohort_forest",
+        "Fig 5E",
+        "Meta-analysis OS forest (internal + external)",
+        "nb14",
+        role="stats",
+    ),
     "5F_loc_arch_counts": SupplementaryTableSpec(
         "fig5F_location_archetype_counts", "Fig 5F", "Location × archetype counts", "nb14",
         role="input",
@@ -226,28 +233,28 @@ SUPPLEMENTARY_TABLES: dict[str, SupplementaryTableSpec] = {
         role="stats",
     ),
     # --- Fig S4 discovery survival supplements ---
-    "S4A_univar_os": SupplementaryTableSpec(
-        "figS4A_cox_univar_OS", "Fig S4A", "Discovery univariable Cox (OS)", "nb9",
+    "S4F_univar_os": SupplementaryTableSpec(
+        "figS4F_cox_univar_OS", "Fig S4F", "Discovery univariable Cox (OS)", "nb9",
         role="stats",
     ),
-    "S4A_univar_dss": SupplementaryTableSpec(
-        "figS4A_cox_univar_DSS", "Fig S4A", "Discovery univariable Cox (DSS)", "nb9",
+    "S4F_univar_dss": SupplementaryTableSpec(
+        "figS4F_cox_univar_DSS", "Fig S4F", "Discovery univariable Cox (DSS)", "nb9",
         role="stats",
     ),
-    "S4B_val_km_no_pcns": SupplementaryTableSpec(
-        "figS4B_val_km_os_archetype_no_pcns", "Fig S4B", "Validation KM OS archetype (no PCNS)", "nb17",
+    "S4D_val_km_no_pcns": SupplementaryTableSpec(
+        "figS4D_val_km_os_archetype_no_pcns", "Fig S4D", "Validation KM OS archetype (no PCNS)", "nb17",
         role="input",
     ),
-    "S4D_event_grid": SupplementaryTableSpec(
-        "figS4D_event_rate_grid", "Fig S4D", "Discovery 2-y OS event-rate grid", "nb9",
+    "S4A_event_grid": SupplementaryTableSpec(
+        "figS4A_event_rate_grid", "Fig S4A", "Discovery 2-y OS event-rate grid", "nb9",
         role="input",
     ),
-    "S4E_sym_lrt": SupplementaryTableSpec(
-        "figS4E_symmetric_lrt", "Fig S4E", "Discovery symmetric LRT tests", "nb9",
+    "S4B_sym_lrt": SupplementaryTableSpec(
+        "figS4B_symmetric_lrt", "Fig S4B", "Discovery symmetric LRT tests", "nb9",
         role="stats",
     ),
-    "S4F_partition": SupplementaryTableSpec(
-        "figS4F_loglikelihood_partition", "Fig S4F", "Discovery prognostic partition", "nb9",
+    "S4C_partition": SupplementaryTableSpec(
+        "figS4C_loglikelihood_partition", "Fig S4C", "Discovery prognostic partition", "nb9",
         role="stats",
     ),
     "S4_mv_clinical": SupplementaryTableSpec(
@@ -314,11 +321,17 @@ SUPPLEMENTARY_TABLES: dict[str, SupplementaryTableSpec] = {
 
 # Legacy CSV stems from earlier notebook runs → canonical stem (for xlsx ingest).
 LEGACY_SUPPLEMENTARY_STEMS: dict[str, str] = {
-    "figS3A_cox_univar_OS": "figS4A_cox_univar_OS",
-    "figS3A_cox_univar_DSS": "figS4A_cox_univar_DSS",
+    "figS4A_cox_univar_OS": "figS4F_cox_univar_OS",
+    "figS4A_cox_univar_DSS": "figS4F_cox_univar_DSS",
+    "figS4B_val_km_os_archetype_no_pcns": "figS4D_val_km_os_archetype_no_pcns",
+    "figS4D_event_rate_grid": "figS4A_event_rate_grid",
+    "figS4E_symmetric_lrt": "figS4B_symmetric_lrt",
+    "figS4F_loglikelihood_partition": "figS4C_loglikelihood_partition",
+    "figS3A_cox_univar_OS": "figS4F_cox_univar_OS",
+    "figS3A_cox_univar_DSS": "figS4F_cox_univar_DSS",
     "figS3B_cox_os_clinical_multivariable_forest": "figS4_supp_cox_os_clinical_multivariable_forest",
     "figS3B_cox_os_age_coo_location_archetype_forest": "figS4_supp_cox_os_age_coo_location_archetype_forest",
-    "figS3D_symmetric_lrt": "figS4E_symmetric_lrt",
+    "figS3D_symmetric_lrt": "figS4B_symmetric_lrt",
     "figValS3A_cox_univar_OS": "fig5_supp_cox_univar_OS",
     "figValS3B_cox_location_archetype_forest_OS": "fig5G_cox_location_archetype_forest_OS",
     "figValS3C_symmetric_lrt": "fig5I_symmetric_lrt",
@@ -339,7 +352,7 @@ LEGACY_SUPPLEMENTARY_STEMS: dict[str, str] = {
     "fig3E-H_val_module_kruskal_stats": "figS5C_val_module_kruskal_stats",
     "fig3I-L_val_module_scores_long": "figS5C_val_thelper_scores_long",
     "fig3O_val_gsea_long": "figS5D_val_gsea_long",
-    "fig5A_val_km_os_archetype_no_pcns": "figS4B_val_km_os_archetype_no_pcns",
+    "fig5A_val_km_os_archetype_no_pcns": "figS4D_val_km_os_archetype_no_pcns",
     "fig2F_km_os_archetype_no_outliers": "figS4_supp_km_os_archetype_no_outliers",
     "fig2G_km_dss_archetype_no_outliers": "figS4_supp_km_dss_archetype_no_outliers",
     "figVal16_classifier_os_benchmark": "figS5_supp_classifier_os_benchmark",
