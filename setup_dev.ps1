@@ -12,8 +12,8 @@
 # If script execution is blocked once:
 #   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 #
-# Override Zenodo record without editing this file:
-#   $env:ZENODO_RECORD_ID = "21440631"; .\setup_dev.ps1
+# Override Zenodo record without editing this file (pin a version, or use concept id):
+#   $env:ZENODO_RECORD_ID = "21843878"; .\setup_dev.ps1
 
 [CmdletBinding()]
 param(
@@ -24,8 +24,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Zenodo record that hosts the public AnnData (not the raw IMC.7z archive).
-$DefaultZenodoRecordId = "21440631"
+# Zenodo concept record — always resolves to the latest published version
+# (concept DOI: 10.5281/zenodo.20592859). Override with ZENODO_RECORD_ID to pin.
+$DefaultZenodoRecordId = "20592859"
 
 # Local path notebooks expect. Zenodo filename differs (see $ZenodoAdataFilename).
 $AdataBasename = "DLBCL_location_2026.h5ad"
@@ -94,11 +95,30 @@ function Link-Adata {
     }
 }
 
+function Resolve-ZenodoRecordId {
+    param([string]$RequestedId)
+    # Concept ids (e.g. 20592859) redirect to the latest version record via the API.
+    try {
+        $resp = Invoke-WebRequest -Uri "https://zenodo.org/api/records/$RequestedId" -MaximumRedirection 5
+        $final = $resp.BaseResponse.ResponseUri.AbsoluteUri
+        if ($final -match '/api/records/(\d+)/?$') {
+            return $Matches[1]
+        }
+    } catch {
+        # Fall back to the requested id (works for concrete version records).
+    }
+    return $RequestedId
+}
+
 function Download-AdataFromZenodo {
     param([string]$RecordId, [string]$LinkPath)
+    $resolvedId = Resolve-ZenodoRecordId -RequestedId $RecordId
     # Fetch only the AnnData object; never the multi-GB IMC.7z on the same record.
-    $url = "https://zenodo.org/records/$RecordId/files/$ZenodoAdataFilename`?download=1"
-    Write-Host "Downloading AnnData from Zenodo (record $RecordId) ..."
+    $url = "https://zenodo.org/records/$resolvedId/files/$ZenodoAdataFilename`?download=1"
+    if ($resolvedId -ne $RecordId) {
+        Write-Host "Resolved Zenodo concept/record $RecordId -> latest version $resolvedId"
+    }
+    Write-Host "Downloading AnnData from Zenodo (record $resolvedId) ..."
     Write-Host "  $url"
     Write-Host "  -> $LinkPath"
     $linkDir = Split-Path -Parent $LinkPath

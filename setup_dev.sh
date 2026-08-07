@@ -11,13 +11,14 @@
 # Optional: run all figure notebooks after setup (~10–20 minutes typical):
 #   ./setup_dev.sh --execute-figures
 #
-# Override Zenodo record without editing this file:
-#   ZENODO_RECORD_ID=21440631 ./setup_dev.sh
+# Override Zenodo record without editing this file (pin a version, or use concept id):
+#   ZENODO_RECORD_ID=21843878 ./setup_dev.sh
 
 set -euo pipefail
 
-# Zenodo record that hosts the public AnnData (not the raw IMC.7z archive).
-DEFAULT_ZENODO_RECORD_ID="21440631"
+# Zenodo concept record — always resolves to the latest published version
+# (concept DOI: 10.5281/zenodo.20592859). Override with ZENODO_RECORD_ID to pin.
+DEFAULT_ZENODO_RECORD_ID="20592859"
 
 # Local path notebooks expect. Zenodo filename differs (see ZENODO_ADATA_FILENAME).
 ADATA_BASENAME="DLBCL_location_2026.h5ad"
@@ -115,11 +116,35 @@ link_or_copy_adata() {
   echo "Symlinked $ADATA_LINK -> $src"
 }
 
+resolve_zenodo_record_id() {
+  # Concept ids (e.g. 20592859) redirect to the latest version record via the API.
+  local requested="$1"
+  local resolved=""
+  if command -v curl >/dev/null 2>&1; then
+    resolved="$(curl -fsSL -o /dev/null -w '%{url_effective}' "https://zenodo.org/api/records/${requested}" || true)"
+  elif command -v wget >/dev/null 2>&1; then
+    resolved="$(wget -q --max-redirect=5 --server-response -O /dev/null "https://zenodo.org/api/records/${requested}" 2>&1 | awk 'tolower($1)=="location:" {print $2}' | tail -n1 | tr -d '\r' || true)"
+    if [[ "$resolved" == /* ]]; then
+      resolved="https://zenodo.org${resolved}"
+    fi
+  fi
+  if [[ -n "$resolved" && "$resolved" == */api/records/* ]]; then
+    basename "$resolved"
+  else
+    echo "$requested"
+  fi
+}
+
 download_adata_from_zenodo() {
-  local record_id="$1"
+  local requested_id="$1"
+  local record_id
+  record_id="$(resolve_zenodo_record_id "$requested_id")"
   # Fetch only the AnnData object; never the multi-GB IMC.7z on the same record.
   local url="https://zenodo.org/records/${record_id}/files/${ZENODO_ADATA_FILENAME}?download=1"
   local tmp="${ADATA_LINK}.partial"
+  if [[ "$record_id" != "$requested_id" ]]; then
+    echo "Resolved Zenodo concept/record ${requested_id} -> latest version ${record_id}"
+  fi
   echo "Downloading AnnData from Zenodo (record ${record_id}) ..."
   echo "  $url"
   echo "  -> ${ADATA_LINK}"
@@ -166,8 +191,10 @@ Workaround — symlink a local copy (no file copy; ~0.6 GB):
 
 Or download only the AnnData from Zenodo (not IMC.7z):
 
+  RECORD_ID=\$(curl -fsSL -o /dev/null -w '%{url_effective}' \\
+    https://zenodo.org/api/records/${DEFAULT_ZENODO_RECORD_ID:-20592859} | sed 's|.*/||')
   curl -fL -o data/${ADATA_BASENAME} \\
-    "https://zenodo.org/records/${DEFAULT_ZENODO_RECORD_ID:-21440631}/files/${ZENODO_ADATA_FILENAME}?download=1"
+    "https://zenodo.org/records/\${RECORD_ID}/files/${ZENODO_ADATA_FILENAME}?download=1"
 
 EOF
 fi

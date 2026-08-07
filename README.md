@@ -40,7 +40,7 @@ chmod +x setup_dev.sh
 .\setup_dev.ps1
 ```
 
-This downloads **only** the AnnData (~600 MB) from Zenodo record [21440631](https://zenodo.org/records/21440631) into `data/DLBCL_location_2026.h5ad`. It does **not** download the raw IMC archive (`IMC.7z`).
+This downloads **only** the AnnData (~600 MB) from Zenodo into `data/DLBCL_location_2026.h5ad` (concept DOI [10.5281/zenodo.20592859](https://doi.org/10.5281/zenodo.20592859), which always resolves to the latest version; current version: [21843878](https://zenodo.org/records/21843878)). It does **not** download the raw IMC archive (`IMC.7z`).
 
 To use a local AnnData instead: `./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad` (or `.\setup_dev.ps1 -Adata ...`).
 
@@ -206,9 +206,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 mkdir -p data
-# AnnData only (~600 MB); do not download IMC.7z from the same Zenodo record
+# AnnData only (~600 MB); do not download IMC.7z from the same Zenodo record.
+# Concept record 20592859 always redirects to the latest version.
+RECORD_ID=$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+  https://zenodo.org/api/records/20592859 | sed 's|.*/||')
 curl -fL -o data/DLBCL_location_2026.h5ad \
-  "https://zenodo.org/records/21440631/files/DLBCL_location_2026.publish.h5ad?download=1"
+  "https://zenodo.org/records/${RECORD_ID}/files/DLBCL_location_2026.publish.h5ad?download=1"
 ```
 
 </details>
