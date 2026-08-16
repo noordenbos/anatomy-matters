@@ -242,7 +242,7 @@ If script activation is blocked: `Set-ExecutionPolicy -Scope CurrentUser RemoteS
 
 ## Citation
 
-_Preprint citation will be added when available._
+Noordenbos, Troy and de Groot, Fleur and de Groen, Ruben and PDF, See, Anatomical Origin Defines Tumor–Immune Archetypes in Diffuse Large B-Cell Lymphoma. Available at SSRN: https://ssrn.com/abstract=7279068 or http://dx.doi.org/10.2139/ssrn.7279068
 
 ## License
 
