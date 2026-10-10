@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import classifier_display_label, finalize_figure_labels
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -98,8 +100,10 @@ def _save_show_close(fig, out_svg: Path | None = None, *, show: bool = True) -> 
         out_svg.parent.mkdir(parents=True, exist_ok=True)
         # Keep text as font elements (not path outlines) for Illustrator/Inkscape editability.
         with plt.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42, "ps.fonttype": 42}):
+            finalize_figure_labels(fig)
             fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
 
@@ -582,7 +586,7 @@ def plot_donut_circos(
                 legend_ax.add_patch(
                     plt.Rectangle((0.03, y - 0.015), 0.025, 0.025, color=v, transform=legend_ax.transAxes, clip_on=False)
                 )
-                legend_ax.text(0.06, y, str(k), fontsize=10, va="center", transform=legend_ax.transAxes)
+                legend_ax.text(0.06, y, classifier_display_label(col, k), fontsize=10, va="center", transform=legend_ax.transAxes)
                 y -= 0.03
             if col in GENOMIC_CLASSIFIER_RING_LABELS and has_untested:
                 _legend_missing_genomic_patch(legend_ax, 0.03, y - 0.015, 0.025)
@@ -1921,7 +1925,7 @@ def plot_association_enrichment_dotplot_by_classifier(
             )
 
         ax.set_yticks(range(len(feats)))
-        ax.set_yticklabels(feats, fontsize=9)
+        ax.set_yticklabels([classifier_display_label(metric, f) for f in feats], fontsize=9)
 
         ax.set_ylim(len(feats) - 0.5, -0.5)
         ax.set_xlim(-0.35 * x_spacing, x_max + 0.35 * x_spacing)
@@ -2054,9 +2058,9 @@ def _format_group_label(group: str) -> str:
     if g == "testis":
         return "Testis"
     if g == "cytotoxic predominant":
-        return "Cytotoxic"
+        return "Cytotoxic\npredominant"
     if g == "low immune":
-        return "Low immune"
+        return "Low\nimmune"
     if g == "complex immune":
-        return "Complex immune"
+        return "Diverse\nimmune"
     return g

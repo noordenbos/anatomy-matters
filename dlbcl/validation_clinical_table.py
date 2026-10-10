@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1026,6 +1028,8 @@ def _cell_display(
     text = "" if value is None or (isinstance(value, float) and pd.isna(value)) else str(value)
     if text.lower() == "nan":
         text = ""
+    if column is None and row_label in COO_CATEGORY_ROWS and text.strip() == "Intermediate":
+        text = text.replace("Intermediate", "Unclassified")
     marks = markers.get((row_label, column), [])
     if not marks:
         return text
@@ -1332,6 +1336,7 @@ def render_clinical_table_svg(
                 _draw_text(origin_x, y, cur, fontsize=max(font_size - 0.5, 5.5))
                 y -= footnote_line_h / 2
 
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", facecolor="white")
     plt.close(fig)
     return out_path

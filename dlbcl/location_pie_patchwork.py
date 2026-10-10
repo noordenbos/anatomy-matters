@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import classifier_display_label, finalize_figure_labels
+
 from colorsys import rgb_to_hsv
 from pathlib import Path
 
@@ -136,7 +138,7 @@ def prepare_pie_patchwork_table(meta: pd.DataFrame) -> tuple[pd.DataFrame, list[
 
 def _display_label(label: str, value: str) -> str:
     aliases = LABEL_DISPLAY_ALIASES.get(label, {})
-    return aliases.get(str(value), str(value))
+    return classifier_display_label(label, aliases.get(str(value), str(value)))
 
 
 def _legend_entries_for_column(
@@ -312,8 +314,10 @@ def plot_location_pie_patchwork(
 
     fig.tight_layout()
     out_svg.parent.mkdir(parents=True, exist_ok=True)
+    finalize_figure_labels(fig)
     fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if show:
+        finalize_figure_labels(plt.gcf())
         plt.show()
     plt.close(fig)
 
@@ -365,10 +369,12 @@ def plot_location_pie_patchwork(
         legend_ax.axis("off")
         if legend_svg is not None:
             legend_svg.parent.mkdir(parents=True, exist_ok=True)
+            finalize_figure_labels(legend_fig)
             legend_fig.savefig(legend_svg, format="svg", bbox_inches="tight")
             legend_path = legend_svg
         if legend_png is not None:
             legend_png.parent.mkdir(parents=True, exist_ok=True)
+            finalize_figure_labels(legend_fig)
             legend_fig.savefig(legend_png, dpi=300, bbox_inches="tight")
         plt.close(legend_fig)
 
@@ -481,11 +487,14 @@ def plot_location_stacked_bar_patchwork(
         fig.suptitle(title, y=1.02)
     fig.tight_layout()
     out_svg.parent.mkdir(parents=True, exist_ok=True)
+    finalize_figure_labels(fig)
     fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if out_png is not None:
         out_png.parent.mkdir(parents=True, exist_ok=True)
+        finalize_figure_labels(fig)
         fig.savefig(out_png, dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(plt.gcf())
         plt.show()
     plt.close(fig)
     return out_svg

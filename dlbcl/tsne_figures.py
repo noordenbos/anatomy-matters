@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 import os
 from pathlib import Path
 
@@ -61,6 +63,7 @@ def show_inline_preview(
 
     buf = BytesIO()
     try:
+        finalize_figure_labels(fig)
         fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
         buf.seek(0)
         with PILImage.open(buf) as img:
@@ -93,19 +96,27 @@ def save_figure(fig, stem: Path, *, repo_root: Path | None = None, preview: bool
 
     if tsne_raster_only():
         _rasterize_scatter_layers(fig)
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".svg"), format="svg", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".pdf"), format="pdf", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".png"), format="png", bbox_inches="tight")
         print(rel_path(stem.with_suffix(".svg"), repo_root))
     else:
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".svg"), format="svg", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".pdf"), format="pdf", bbox_inches="tight")
         print(rel_path(stem.with_suffix(".svg"), repo_root))
 
         _rasterize_scatter_layers(fig)
         raster_stem = stem.parent / f"{stem.name}_raster"
+        finalize_figure_labels(fig)
         fig.savefig(raster_stem.with_suffix(".svg"), format="svg", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(raster_stem.with_suffix(".pdf"), format="pdf", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(raster_stem.with_suffix(".png"), format="png", bbox_inches="tight")
         print(rel_path(raster_stem.with_suffix(".svg"), repo_root))
 
@@ -194,6 +205,7 @@ def plot_tsne(
     if sort_order is not None:
         kwargs["sort_order"] = sort_order
     fig = sc.pl.embedding(adata_plot, **kwargs)
+    finalize_figure_labels(fig, classifier=color)
     save_figure(fig, out_stem, repo_root=repo_root, preview=preview)
     plt.close(fig)
     gc.collect()

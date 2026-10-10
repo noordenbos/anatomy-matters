@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 import os
 import warnings
 from dataclasses import dataclass
@@ -379,6 +381,7 @@ def save_figure_formats(
         kw = dict(bbox_inches=bbox_inches, **savefig_kw)
         if fmt == "png":
             kw.setdefault("dpi", dpi)
+        finalize_figure_labels(fig)
         fig.savefig(out, format=fmt, **kw)
         written.append(out)
     return written

@@ -20,6 +20,13 @@ use local neutral colors. These are not claimed as original palette entries.
 Missing data are separate from classifier-defined residual categories, and unexpected
 subtype labels raise an error instead of receiving an arbitrary color.
 
+Manuscript display labels are centralized in `dlbcl/display_labels.py`: COO
+“Intermediate” is displayed as “Unclassified”, and the third immune archetype
+is displayed as “diverse immune” (DI). Stored calls, analysis keys, group
+assignments, and confidence-interval notation are preserved. Figure 5 export
+labels follow E (meta-analysis), F (distribution), G (Cox), H (event rates),
+I (likelihood-ratio tests), and J (information partition).
+
 We do invite reviewers/editors/public to rerun the notebooks as a fully reproducible pipeline, this process is simplified to 2 simple steps to lower participation threshold.
 There are twelve independent Jupyter notebooks (`fig1`–`fig6`, `table1`, `supplemental_fig1`–`supplemental_fig5`) which read the same single AnnData file (~600MB), that is automatically pulled from zenodo. 
 
