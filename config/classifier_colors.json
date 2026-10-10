@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-10",
+  "description": "Classifier colors shared by notebooks and plotting helpers. Change colors here; never infer subtype mapping from category position.",
+  "missing": {
+    "color": "#F5F5F5",
+    "tokens": [
+      "",
+      "NA",
+      "N/A",
+      "nan",
+      "None",
+      "<NA>",
+      "unknown",
+      "unk"
+    ]
+  },
+  "classifiers": {
+    "dlbclass": {
+      "name": "DLBclass",
+      "bindings": [
+        "DLBclass",
+        "DLBclass_update",
+        "Chapuy 2025\nDLBclass"
+      ],
+      "reference_colors": {
+        "C1": "#803E98",
+        "C2": "#00A4D1",
+        "C3": "#F29123",
+        "C4": "#4D872D",
+        "C5": "#DD2929"
+      },
+      "label_aliases": {},
+      "evidence": "author_code",
+      "sources": [
+        {
+          "url": "https://github.com/getzlab/DLBclass-tool/blob/a074ff27e91bec0e3b33240a88203da94fdb993e/src/tool_functions.py",
+          "sha256": "d926e6c4fb15d2b524fc74ce02a77dacacdb928ab7c29e4b850efeb47467cfb5",
+          "locator": "C1--C5 color dictionary, lines 24--27",
+          "commit": "a074ff27e91bec0e3b33240a88203da94fdb993e"
+        },
+        {
+          "url": "https://github.com/getzlab/DLBCL-Classifier/blob/477de1be84d1397e7f9e3662a2718ac8d8423509/src_R/plot_cluster_alluvials.R",
+          "sha256": "d91477423ad88aadf5aa3be49c730f4433691075bba811576b1fa969cddad74a",
+          "locator": "Named cluster palette used for NatMed 2018 / later classifier comparison"
+        }
+      ],
+      "notes": "Exact author implementation colors. Do not assign study label 0 until its meaning is verified.",
+      "local_fallback": {
+        "colors": {
+          "0": "#D3D3D3"
+        },
+        "reason": "Local neutral color for study output 0; not an assignment to original C0 or Below Threshold. Retain stored label.",
+        "warn": false
+      }
+    },
+    "lymphgen": {
+      "name": "LymphGen",
+      "bindings": [
+        "Lymphgen",
+        "LymphGen",
+        "LymphGen_update",
+        "Lymphgen_aug2024",
+        "Wright 2020\nLymphgen"
+      ],
+      "reference_colors": {
+        "MCD": "#0037FC",
+        "BN2": "#FA2AFC",
+        "N1": "#12C100",
+        "EZB": "#C83E00",
+        "ST2": "#FC0000",
+        "A53": "#020202",
+        "Other": "#EFEFEF"
+      },
+      "label_aliases": {},
+      "evidence": "figure_derived",
+      "sources": [
+        {
+          "url": "https://cdn.ncbi.nlm.nih.gov/pmc/blobs/9e37/8459709/ba97f31815a0/nihms-1733130-f0001.jpg",
+          "sha256": "d4fe7cb2400e5d363b616966d773fd95b35ca49ee48deea5e045c8560ab0afe2",
+          "locator": "Figure 1D legend",
+          "article": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8459709/"
+        }
+      ],
+      "notes": "Approximate sRGB from original figure JPEG. Composite assignments use component colors; no universal composite hex.",
+      "local_fallback": {
+        "colors": {
+          "BN2/MCD": "#800080",
+          "MCD/ST2": "#800080",
+          "EZB/ST2": "#FF8C00"
+        },
+        "reason": "Temporary legacy flat composite colors for existing plotting APIs. Original figure uses constituent-color stripes. Composite rendering remains an explicit follow-up.",
+        "warn": true
+      },
+      "reference_composite_style": "stripes_using_constituent_subtype_colors"
+    },
+    "hmrn": {
+      "name": "HMRN",
+      "bindings": [
+        "HMRN",
+        "Lacy 2020\nHMRN"
+      ],
+      "reference_colors": {
+        "NEC": "#BF0023",
+        "SOCS1/SGK1": "#12497F",
+        "TET2/SGK1": "#3AA933",
+        "MYD88": "#5B2063",
+        "BCL2": "#F28C00",
+        "NOTCH2": "#E4007D"
+      },
+      "label_aliases": {},
+      "evidence": "figure_derived",
+      "sources": [
+        {
+          "url": "https://eprints.whiterose.ac.uk/161559/1/Targeted_sequencing_in_DLBCL_molecular_subtypes_.pdf",
+          "sha256": "887050ec7c5b73a8a912a36e9fe2f8a5c4bbc6759baf3cf0939d1972694aa349",
+          "locator": "PDF page 6, journal page 1763, Figure 1 subtype header",
+          "doi": "10.1182/blood.2019003535"
+        }
+      ],
+      "notes": "Published biological subtype names. Authors' analysis code uses a different palette. Study C1--C6 mapping remains unresolved; NEC is not missing data.",
+      "local_fallback": {
+        "colors": {
+          "C1": "#B8860B",
+          "C2": "#1B9E77",
+          "C3": "#FFA500",
+          "C4": "#D62728",
+          "C5": "#4B0082",
+          "C6": "#7570B3"
+        },
+        "reason": "Temporary legacy study colors; C1--C6 biological mapping is unverified. These are not the original HMRN palette.",
+        "warn": true
+      }
+    },
+    "lymphplex": {
+      "name": "LymphPlex",
+      "bindings": [
+        "LymphPlex",
+        "Shen 2023\nLymphPlex"
+      ],
+      "reference_colors": {
+        "TP53Mut": "#605A5A",
+        "MCD-like": "#2C76B5",
+        "BN2-like": "#8C7DB7",
+        "N1-like": "#53A335",
+        "EZB-like": "#EB7769",
+        "ST2-like": "#CC2D31"
+      },
+      "label_aliases": {
+        "TP53": "TP53Mut",
+        "MCD": "MCD-like",
+        "BN2": "BN2-like",
+        "N1": "N1-like",
+        "EZB": "EZB-like",
+        "ST2": "ST2-like",
+        "Other": "Others"
+      },
+      "evidence": "figure_derived",
+      "sources": [
+        {
+          "url": "https://www.nature.com/articles/s41392-023-01358-y.pdf",
+          "sha256": "8f52f2560a37389aa8fe18474ea431e1e5c9858dff02979989a791c2fee75e70",
+          "locator": "PDF page 3, Figure 1 subtype header",
+          "doi": "10.1038/s41392-023-01358-y"
+        }
+      ],
+      "notes": "Base assigned subtypes only. Other/Others and EZB MYC subdivisions are not assigned colors here.",
+      "local_fallback": {
+        "colors": {
+          "Others": "#D3D3D3"
+        },
+        "reason": "Local neutral color for Other/Others; no original source color verified.",
+        "warn": false
+      }
+    },
+    "lymphomap": {
+      "name": "LymphoMAP",
+      "bindings": [
+        "Li 2025\nLymphoMAP"
+      ],
+      "reference_colors": {
+        "FMAC": "#377EB8",
+        "LN": "#4DAF4A",
+        "TEX": "#E41A1C",
+        "Unassigned": "#BBBBBB"
+      },
+      "label_aliases": {},
+      "evidence": "author_code",
+      "sources": [
+        {
+          "url": "https://github.com/Green-Lab-MDACC/LymphoMapR/blob/fff5203834ba58075c50e9c94355072f20579c9d/R/viz.R",
+          "sha256": "ace2de98ed29ca844cc376b19003c57e140478735553023c461e2d904d141770",
+          "locator": "plot_umap_archetype, lines 69--74",
+          "commit": "fff5203834ba58075c50e9c94355072f20579c9d"
+        }
+      ],
+      "notes": "Exact colors in the study's installed source version, also unchanged in audited current author source."
+    },
+    "kotlov_lme": {
+      "name": "Kotlov LME",
+      "bindings": [
+        "KotlovSig",
+        "KotlovSig_update",
+        "Kotlov 2021\nLME"
+      ],
+      "reference_colors": {
+        "LME-GC": "#2980B9",
+        "LME-ME": "#9B59B6",
+        "LME-IN": "#1ABC9C",
+        "LME-DE": "#E74C3C"
+      },
+      "label_aliases": {
+        "GC-like": "LME-GC",
+        "Mesenchymal": "LME-ME",
+        "Inflammatory": "LME-IN",
+        "Depleted": "LME-DE"
+      },
+      "evidence": "author_code",
+      "sources": [
+        {
+          "url": "https://github.com/BostonGene/LME/blob/ec337ea2f49dceec4cdb8f902540af058eff0aa8/LME_Classification.ipynb",
+          "sha256": "c87221a3f9f0779f2fd9e4aa0ae407fe222e6e031f9ebf1c845d45145b68ff85",
+          "locator": "Notebook cell 26, named lme_p palette",
+          "commit": "ec337ea2f49dceec4cdb8f902540af058eff0aa8"
+        }
+      ],
+      "notes": "Exact author implementation palette. LME-ME is the notebook's label for the mesenchymal category. Original paper figure palette has not independently been checked."
+    },
+    "ciavarella": {
+      "name": "Ciavarella",
+      "bindings": [
+        "Ciav_Cluster",
+        "Ciav_Cluster_update",
+        "Ciavarella 2018\nCluster"
+      ],
+      "reference_colors": {
+        "Cluster 1": "#ED3438",
+        "Cluster 2": "#3753A3",
+        "Cluster 3": "#00A54E"
+      },
+      "label_aliases": {
+        "Hot": "Cluster 1",
+        "Intermediate": "Cluster 2",
+        "Cold": "Cluster 3"
+      },
+      "evidence": "figure_derived",
+      "sources": [
+        {
+          "url": "https://cris.unibo.it/retrieve/handle/11585/649045/e1dcb334-1ed2-7715-e053-1705fe0a6cc9/1-s2.0-S0923753419342371-main.pdf",
+          "sha256": "b4fb2138afb7b00723520eb4dabaddae494900fbe7b9fad13ebc200972a11e15",
+          "locator": "PDF page 5, Figure 2A heatmap cluster header",
+          "doi": "10.1093/annonc/mdy450"
+        }
+      ],
+      "notes": "Cluster 1/2/3 correspond to high/intermediate/low TME gene expression. Figure 2B/C survival-curve hues differ slightly; use the categorical heatmap palette as the reference."
+    },
+    "ecotyper_ecotypes": {
+      "name": "EcoTyper ecotypes",
+      "bindings": [
+        "Lymphoma_Ecotype",
+        "Lymphoma_Ecotype_confident",
+        "New_Ecotype",
+        "Steen 2021\nLymphoma_Ecotype"
+      ],
+      "reference_colors": {
+        "LE1": "#3E2883",
+        "LE2": "#76A2E4",
+        "LE3": "#8E549F",
+        "LE4": "#458833",
+        "LE5": "#BBD058",
+        "LE6": "#FFFD61",
+        "LE7": "#F8D25D",
+        "LE8": "#F3A83B",
+        "LE9": "#EC5428"
+      },
+      "label_aliases": {},
+      "evidence": "author_code",
+      "sources": [
+        {
+          "url": "https://github.com/digitalcytometry/ecotyper/blob/11408e71900e15829cf4f33e1331ce47c053472d/pipeline/lib/misc.R",
+          "sha256": "351c0209c9a680133af0cf00e8e0a39af3781473ae0c67fef0035f206993c1c6",
+          "locator": "get_colors: palette 8, dataset Lymphoma",
+          "commit": "11408e71900e15829cf4f33e1331ce47c053472d"
+        },
+        {
+          "url": "https://github.com/digitalcytometry/ecotyper/blob/11408e71900e15829cf4f33e1331ce47c053472d/pipeline/lib/heatmaps.R",
+          "sha256": "42140b5a303bd11aaca4b6ecd3460e07a78600bb44fe2c8936ce18d81f38492f",
+          "locator": "Factor-level color assignment"
+        }
+      ],
+      "notes": "Exact author source colors."
+    },
+    "ecotyper_b_cell_states": {
+      "name": "EcoTyper B-cell states",
+      "bindings": [
+        "ecotyper_b_state"
+      ],
+      "reference_colors": {
+        "S01": "#EB7D5B",
+        "S02": "#FED23F",
+        "S03": "#B5D33D",
+        "S04": "#6CA2EA",
+        "S05": "#442288"
+      },
+      "label_aliases": {
+        "S1": "S01",
+        "S2": "S02",
+        "S3": "S03",
+        "S4": "S04",
+        "S5": "S05"
+      },
+      "evidence": "author_code",
+      "sources": [
+        {
+          "url": "https://github.com/digitalcytometry/ecotyper/blob/11408e71900e15829cf4f33e1331ce47c053472d/pipeline/lib/misc.R",
+          "sha256": "351c0209c9a680133af0cf00e8e0a39af3781473ae0c67fef0035f206993c1c6",
+          "locator": "get_colors: palette 1, dataset Lymphoma, first five colors",
+          "commit": "11408e71900e15829cf4f33e1331ce47c053472d"
+        }
+      ],
+      "notes": "Canonical internal labels S01--S05; compact display can use S1--S5."
+    },
+    "lymph2cx_coo": {
+      "name": "Cell of origin / Lymph2Cx",
+      "bindings": [
+        "COO_NanoString",
+        "COO_NanoString_update",
+        "coo",
+        "Cell of Origin",
+        "Alizadeh 2000\nCell of Origin"
+      ],
+      "reference_colors": {
+        "GCB": "#FF9100",
+        "Unclassified": "#006412",
+        "ABC": "#00AFF2"
+      },
+      "label_aliases": {
+        "Intermediate": "Unclassified"
+      },
+      "evidence": "figure_derived",
+      "sources": [
+        {
+          "url": "https://cdn.ncbi.nlm.nih.gov/pmc/blobs/9191/3931191/a6f44f7fd89c/1214f1.jpg",
+          "sha256": "48ec13a23455d6ff8b26b4a09329b84353b7757fa3c4ce40f907642f2b6ac205",
+          "locator": "Figure 1A Lymph2Cx subtype bar",
+          "doi": "10.1182/blood-2013-11-536433",
+          "article": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3931191/"
+        }
+      ],
+      "notes": "Assay-specific reference, not a universal COO palette. JPEG has an Adobe RGB profile, converted to sRGB before sampling. Unclassified is a classifier result, not unavailable data."
+    },
+    "proteogenotypes": {
+      "name": "Proteogenotypes",
+      "bindings": [
+        "proteogenotype",
+        "Proteogenotype",
+        "Oellerich\nProteogenotype"
+      ],
+      "reference_colors": {
+        "PG1": "#BC3C28",
+        "PG2": "#0072B5",
+        "PG3": "#E59744",
+        "PG4": "#1D844E",
+        "PG5": "#7876B1",
+        "PG6": "#6E98AC",
+        "PG7": "#FEDC91"
+      },
+      "label_aliases": {
+        "1": "PG1",
+        "2": "PG2",
+        "3": "PG3",
+        "4": "PG4",
+        "5": "PG5",
+        "6": "PG6",
+        "7": "PG7"
+      },
+      "evidence": "figure_derived",
+      "sources": [
+        {
+          "url": "https://www.repository.cam.ac.uk/bitstreams/c21510f5-6515-404d-836e-81f88569ed5f/download",
+          "sha256": "a634cb7aa95371516aae5a2c22da221ab2df7b14671366c4e6f3034538ba3fc5",
+          "locator": "Accepted manuscript PDF page 73, Figure 2A proteogenotype legend",
+          "doi": "10.1016/j.ccell.2026.05.008"
+        }
+      ],
+      "notes": "Palette from the author-accepted manuscript figure, not a separately verified final typeset figure. PG labels use the project's existing PG prefix."
+    }
+  }
+}

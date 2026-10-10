@@ -3,6 +3,21 @@
 Code and notebooks to reproduce the figures in our manuscript (preprint; journal submission pending).
 
 Notebooks are committed **with inline outputs**, so you can browse results without re-running.
+
+Classifier colors are configured in [`config/classifier_colors.json`](config/classifier_colors.json).
+The notebooks and plotting helpers read this shared config through
+[`dlbcl/classifier_colors.py`](dlbcl/classifier_colors.py), using subtype names rather than category order.
+It records original source colors, provenance, and aliases for the stored labels;
+`author_code` values are exact, while `figure_derived` values are approximate sRGB samples.
+After editing the config, restart the notebook kernel and rerun the affected panels.
+
+Known exceptions are explicit under `local_fallback`: HMRN C1–C6 retain temporary
+study colors pending biological-label verification; LymphGen composites retain temporary
+flat colors pending multicolor rendering; DLBclass `0` and LymphPlex `Other`/`Others`
+use local neutral colors. These are not claimed as original palette entries.
+Missing data are separate from classifier-defined residual categories, and unexpected
+subtype labels raise an error instead of receiving an arbitrary color.
+
 We do invite reviewers/editors/public to rerun the notebooks as a fully reproducible pipeline, this process is simplified to 2 simple steps to lower participation threshold.
 There are twelve independent Jupyter notebooks (`fig1`–`fig6`, `table1`, `supplemental_fig1`–`supplemental_fig5`) which read the same single AnnData file (~600MB), that is automatically pulled from zenodo. 
 

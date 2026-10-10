@@ -9,6 +9,10 @@ import numpy as np
 import pandas as pd
 from scipy.stats import chi2_contingency, fisher_exact
 
+from .classifier_colors import (
+    classifier_bindings, classifier_color, classifier_key, classifier_palette, is_missing_label,
+)
+
 ARCHETYPE_NAME_MAP = {
     1: "low immune",
     2: "cytotoxic predominant",
@@ -72,83 +76,7 @@ DONUT_COLOR_PALETTES = {
         "NA": "whitesmoke",
     },
     HLA_CLASS_STATE_LABEL: HLA_CLASS_STATE_COLORS,
-    "Li 2025\nLymphoMAP": {
-        "FMAC": "#984ea3",
-        "LN": "#ff7f00",
-        "TEX": "#ffff33",
-        "NA": "whitesmoke",
-    },
-    "Kotlov 2021\nLME": {
-        "Depleted": "mediumpurple",
-        "GC-like": "darkorange",
-        "Inflammatory": "crimson",
-        "Mesenchymal": "darkgoldenrod",
-        "NA": "whitesmoke",
-    },
-    "Ciavarella 2018\nCluster": {
-        "Hot": "coral",
-        "Intermediate": "orchid",
-        "Cold": "darkorchid",
-        "NA": "whitesmoke",
-    },
-    "Steen 2021\nLymphoma_Ecotype": {
-        "LE1": "#a6cee3",
-        "LE2": "#e78ac3",
-        "LE3": "#a6d854",
-        "LE4": "#ffd92f",
-        "LE5": "#b2df8a",
-        "LE6": "#fb8072",
-        "LE7": "#80b1d3",
-        "LE8": "#e5c494",
-        "LE9": "#fccde5",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Alizadeh 2000\nCell of Origin": {
-        "GCB": "gold",
-        "ABC": "darkviolet",
-        "Intermediate": "pink",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Wright 2020\nLymphgen": {
-        "MCD": "blueviolet",
-        "BN2": "#80b1d3",
-        "EZB": "darkgoldenrod",
-        "Other": "lightgray",
-        "ST2": "#fdb462",
-        "BN2/MCD": "purple",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Chapuy 2025\nDLBclass": {
-        "C1": "darkgoldenrod",
-        "C3": "orange",
-        "C4": "#d62728",
-        "C5": "indigo",
-        "0": "lightgray",
-        "NA": "whitesmoke",
-    },
-    "Lacy 2020\nHMRN": {
-        "C1": "darkgoldenrod",
-        "C2": "#1b9e77",
-        "C3": "orange",
-        "C4": "#d62728",
-        "C5": "indigo",
-        "C6": "#7570b3",
-        "NA": "whitesmoke",
-    },
-    "Shen 2023\nLymphPlex": {
-        "MCD": "blueviolet",
-        "BN2": "#80b1d3",
-        "EZB": "darkgoldenrod",
-        "ST2": "#fdb462",
-        "N1": "#b3de69",
-        "TP53": "#d62728",
-        "Others": "lightgray",
-        "Other": "lightgray",
-        "NA": "whitesmoke",
-    },
+    **{name: classifier_palette(name) for name in classifier_bindings()},
 }
 
 
@@ -393,6 +321,8 @@ def order_patients_hierarchical(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _donut_color(col: str, val) -> str:
+    if classifier_key(col) is not None:
+        return classifier_color(col, val)
     palette = DONUT_COLOR_PALETTES.get(col, {})
     return palette.get(str(val), palette.get("NA", "#cccccc"))
 
@@ -637,9 +567,10 @@ def plot_donut_circos(
         y = 0.95
         for col in legend_cols:
             palette = DONUT_COLOR_PALETTES.get(col, {})
-            legend_ax.text(0.01, y, col, fontsize=12, fontweight="bold", va="top")
+            legend_ax.text(0.01, y, col.replace("\n", " "), fontsize=12, fontweight="bold", va="top")
             y -= 0.04
-            entries = [(k, v) for k, v in palette.items() if k != "NA"]
+            observed = {str(v).strip() for v in work[col].dropna().unique()}
+            entries = [(k, v) for k, v in palette.items() if k in observed and not is_missing_label(k)]
             if col == "Tumor Immune Archetype\n(this work)":
                 order = ["cytotoxic predominant", "low immune", "complex immune"]
                 rank = {name: i for i, name in enumerate(order)}

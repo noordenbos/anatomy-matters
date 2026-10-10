@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from .classifier_colors import classifier_key, classifier_palette
 from .integration_figures import DONUT_COLOR_PALETTES, LOCATION_RECODE, configure_matplotlib
 
 LOCATION_ORDER = ["PCNS", "bone", "nodal", "testis", "other"]
@@ -30,16 +31,7 @@ MOLECULAR_COLUMN_SPECS: list[tuple[str, str]] = [
 ]
 
 # Subtype labels not in the shared donut palette
-PALETTE_EXTRAS: dict[str, dict[str, str]] = {
-    "Wright 2020\nLymphgen": {
-        "MCD/ST2": "purple",
-        "EZB/ST2": "darkorange",
-        "N1": "#b3de69",
-        "A53": "#bc80bd",
-    },
-    "Chapuy 2025\nDLBclass": {"C2": "#4daf4a"},
-    "Shen 2023\nLymphPlex": {"Other": "lightgray"},
-}
+PALETTE_EXTRAS: dict[str, dict[str, str]] = {}  # Classifier additions belong in config/classifier_colors.json.
 
 # Harmonize cross-classifier residual labels for display / legend.
 LABEL_DISPLAY_ALIASES: dict[str, dict[str, str]] = {
@@ -177,7 +169,11 @@ def _legend_entries_for_column(
 
 
 def _palette_for_column(col: str, label: str, values: pd.Series) -> tuple[dict[str, str], list[str]]:
-    base = dict(DONUT_COLOR_PALETTES.get(label, {}))
+    name = col if classifier_key(col) is not None else label
+    if classifier_key(name) is not None:
+        base = classifier_palette(name, values)
+    else:
+        base = dict(DONUT_COLOR_PALETTES.get(label, {}))
     base.update(PALETTE_EXTRAS.get(label, {}))
     if base:
         supervised_order = SUPERVISED_LEVEL_ORDER.get(label, [])
@@ -341,7 +337,7 @@ def plot_location_pie_patchwork(
         legend_fig, legend_ax = plt.subplots(figsize=(6, legend_h))
         y = 0.98
         for label, entries in legend_sections:
-            legend_ax.text(0.01, y, label, fontsize=title_fontsize, fontweight="bold", va="top")
+            legend_ax.text(0.01, y, label.replace("\n", " "), fontsize=title_fontsize, fontweight="bold", va="top")
             y -= line_step
             for k, v in entries:
                 legend_ax.add_patch(

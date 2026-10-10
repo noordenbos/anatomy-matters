@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .classifier_colors import classifier_key, classifier_palette, missing_color as classifier_missing_color
+
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
@@ -81,6 +83,13 @@ def make_categorical_color_series(
         levels = [x for x in level_order if x in set(non_missing)]
         extra = [x for x in pd.unique(non_missing) if x not in levels]
         levels = levels + extra
+
+    if classifier_key(series.name) is not None:
+        color_map = classifier_palette(series.name, levels)
+        out[:] = classifier_missing_color()
+        for level in levels:
+            out.loc[s == level] = color_map[str(level).strip()]
+        return out, {level: color_map[str(level).strip()] for level in levels}
 
     colors = sns.color_palette(palette, n_colors=max(len(levels), 1))
     color_map = {lev: rgb_to_hex(colors[i]) for i, lev in enumerate(levels)}

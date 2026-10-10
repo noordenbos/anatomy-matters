@@ -11,6 +11,7 @@ import pandas as pd
 import scanpy as sc
 
 from .dlbcl_io import rel_path
+from .classifier_colors import classifier_key, classifier_palette
 
 TSNE_BASIS = "tsne_all"
 PLOT_SEED = 42
@@ -28,12 +29,7 @@ def tsne_raster_only() -> bool:
         return False
     return os.environ.get(_TSNE_RASTER_ONLY_ENV, "").strip().lower() in {"1", "true", "yes"}
 
-CLASSIFIER_PALETTES = {
-    "Lymphgen": ["#9467bd", "#1f77b4", "#2ca02c", "#ff7f0e", "#d62728", "#8c564b", "lightgrey"],
-    "DLBclass": ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00"],
-    "HMRN": ["#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462"],
-    "LymphPlex": ["#9467bd", "#1f77b4", "#ff7f0e", "#2ca02c", "#b3de69", "#d62728", "lightgrey"],
-}
+CLASSIFIER_PALETTES = {name: classifier_palette(name) for name in ("Lymphgen", "DLBclass", "HMRN", "LymphPlex")}
 
 
 def configure_tsne_matplotlib() -> None:
@@ -189,6 +185,10 @@ def plot_tsne(
         size=size,
         return_fig=True,
     )
+    if classifier_key(color) is not None:
+        labels = adata_plot.obs[color]
+        levels = labels.cat.categories if isinstance(labels.dtype, pd.CategoricalDtype) else labels.unique()
+        palette = classifier_palette(color, levels)
     if palette is not None:
         kwargs["palette"] = palette
     if sort_order is not None:

@@ -13,6 +13,8 @@ archetypes (nb5 elastic net), and OS only. Panels needing data the cohort lacks
 
 from __future__ import annotations
 
+from .classifier_colors import reference_palette
+
 from pathlib import Path
 
 import numpy as np
@@ -770,13 +772,7 @@ def build_integration_metadata_validation(
 # Fig 3M — EcoTyper B-cell states by archetype (nb6 aesthetics)
 # --------------------------------------------------------------------------- #
 ECOTYPER_BSTATE_ORDER = ["S01", "S02", "S03", "S04", "S05"]
-ECOTYPER_BSTATE_COLORS = {
-    "S01": "#f4a21d",
-    "S02": "#ffd84d",
-    "S03": "#7ac943",
-    "S04": "#3fa9f5",
-    "S05": "#2f4aa8",
-}
+ECOTYPER_BSTATE_COLORS = reference_palette("ecotyper_b_cell_states")
 ECOTYPER_BSTATE_LABELS = {
     "S01": "S1",
     "S02": "S2",
