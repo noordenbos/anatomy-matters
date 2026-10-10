@@ -11,8 +11,10 @@ It records original source colors, provenance, and aliases for the stored labels
 `author_code` values are exact, while `figure_derived` values are approximate sRGB samples.
 After editing the config, restart the notebook kernel and rerun the affected panels.
 
-Known exceptions are explicit under `local_fallback`: HMRN C1–C6 retain temporary
-study colors pending biological-label verification; LymphGen composites retain temporary
+HMRN C1–C6 map to NEC, SOCS1/SGK1, TET2/SGK1, MYD88, BCL2, and NOTCH2,
+respectively, as confirmed by the manuscript author.
+
+Known exceptions are explicit under `local_fallback`: LymphGen composites retain temporary
 flat colors pending multicolor rendering; DLBclass `0` and LymphPlex `Other`/`Others`
 use local neutral colors. These are not claimed as original palette entries.
 Missing data are separate from classifier-defined residual categories, and unexpected

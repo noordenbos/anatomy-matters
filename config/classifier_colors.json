@@ -108,7 +108,14 @@
         "BCL2": "#F28C00",
         "NOTCH2": "#E4007D"
       },
-      "label_aliases": {},
+      "label_aliases": {
+        "C1": "NEC",
+        "C2": "SOCS1/SGK1",
+        "C3": "TET2/SGK1",
+        "C4": "MYD88",
+        "C5": "BCL2",
+        "C6": "NOTCH2"
+      },
       "evidence": "figure_derived",
       "sources": [
         {
@@ -118,19 +125,8 @@
           "doi": "10.1182/blood.2019003535"
         }
       ],
-      "notes": "Published biological subtype names. Authors' analysis code uses a different palette. Study C1--C6 mapping remains unresolved; NEC is not missing data.",
-      "local_fallback": {
-        "colors": {
-          "C1": "#B8860B",
-          "C2": "#1B9E77",
-          "C3": "#FFA500",
-          "C4": "#D62728",
-          "C5": "#4B0082",
-          "C6": "#7570B3"
-        },
-        "reason": "Temporary legacy study colors; C1--C6 biological mapping is unverified. These are not the original HMRN palette.",
-        "warn": true
-      }
+      "notes": "Published biological subtype names. Authors' analysis code uses a different palette. Study C1--C6 map to the named subtypes as confirmed by the manuscript author; NEC is not missing data.",
+      "label_mapping_source": "Manuscript author confirmation, 2026-10-10: C1--C6 follow the declared reference palette order (NEC, SOCS1/SGK1, TET2/SGK1, MYD88, BCL2, NOTCH2)."
     },
     "lymphplex": {
       "name": "LymphPlex",

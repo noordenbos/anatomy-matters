@@ -30,11 +30,20 @@ class ClassifierColorTests(unittest.TestCase):
         self.assertNotEqual(classifier_color("HMRN", "NEC"), missing_color())
         self.assertNotEqual(classifier_color("DLBclass", "0"), missing_color())
 
-    def test_unverified_hmrn_mapping_is_explicit(self):
-        self.assertNotIn("C1", reference_palette("HMRN"))
-        with self.assertWarns(PaletteFallbackWarning):
-            color = classifier_color("HMRN", "C1")
-        self.assertEqual(color, "#B8860B")
+    def test_author_confirmed_hmrn_mapping_uses_original_subtype_colors(self):
+        expected = {
+            "C1": ("NEC", "#BF0023"),
+            "C2": ("SOCS1/SGK1", "#12497F"),
+            "C3": ("TET2/SGK1", "#3AA933"),
+            "C4": ("MYD88", "#5B2063"),
+            "C5": ("BCL2", "#F28C00"),
+            "C6": ("NOTCH2", "#E4007D"),
+        }
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", PaletteFallbackWarning)
+            for code, (label, color) in expected.items():
+                self.assertEqual(classifier_color("HMRN", code), color)
+                self.assertEqual(classifier_color("HMRN", label), color)
 
     def test_composite_fallback_is_not_claimed_as_original(self):
         self.assertNotIn("BN2/MCD", reference_palette("Lymphgen"))
