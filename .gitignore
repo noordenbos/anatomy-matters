@@ -75,3 +75,12 @@ Thumbs.db
 .env.*
 *.key
 credentials.json
+
+# Local audit resources and release execution artifacts
+config/classification_audit/local.json
+.matplotlib/
+.ipython/
+outputs/
+vendor/
+data/*.h5ad*
+requirements-local.txt

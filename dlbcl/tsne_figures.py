@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 import os
 from pathlib import Path
 
@@ -11,6 +13,7 @@ import pandas as pd
 import scanpy as sc
 
 from .dlbcl_io import rel_path
+from .classifier_colors import classifier_key, classifier_palette
 
 TSNE_BASIS = "tsne_all"
 PLOT_SEED = 42
@@ -28,12 +31,7 @@ def tsne_raster_only() -> bool:
         return False
     return os.environ.get(_TSNE_RASTER_ONLY_ENV, "").strip().lower() in {"1", "true", "yes"}
 
-CLASSIFIER_PALETTES = {
-    "Lymphgen": ["#9467bd", "#1f77b4", "#2ca02c", "#ff7f0e", "#d62728", "#8c564b", "lightgrey"],
-    "DLBclass": ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00"],
-    "HMRN": ["#8dd3c7", "#ffffb3", "#bebada", "#fb8072", "#80b1d3", "#fdb462"],
-    "LymphPlex": ["#9467bd", "#1f77b4", "#ff7f0e", "#2ca02c", "#b3de69", "#d62728", "lightgrey"],
-}
+CLASSIFIER_PALETTES = {name: classifier_palette(name) for name in ("Lymphgen", "DLBclass", "HMRN", "LymphPlex")}
 
 
 def configure_tsne_matplotlib() -> None:
@@ -65,6 +63,7 @@ def show_inline_preview(
 
     buf = BytesIO()
     try:
+        finalize_figure_labels(fig)
         fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
         buf.seek(0)
         with PILImage.open(buf) as img:
@@ -97,19 +96,27 @@ def save_figure(fig, stem: Path, *, repo_root: Path | None = None, preview: bool
 
     if tsne_raster_only():
         _rasterize_scatter_layers(fig)
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".svg"), format="svg", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".pdf"), format="pdf", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".png"), format="png", bbox_inches="tight")
         print(rel_path(stem.with_suffix(".svg"), repo_root))
     else:
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".svg"), format="svg", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(stem.with_suffix(".pdf"), format="pdf", bbox_inches="tight")
         print(rel_path(stem.with_suffix(".svg"), repo_root))
 
         _rasterize_scatter_layers(fig)
         raster_stem = stem.parent / f"{stem.name}_raster"
+        finalize_figure_labels(fig)
         fig.savefig(raster_stem.with_suffix(".svg"), format="svg", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(raster_stem.with_suffix(".pdf"), format="pdf", bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(raster_stem.with_suffix(".png"), format="png", bbox_inches="tight")
         print(rel_path(raster_stem.with_suffix(".svg"), repo_root))
 
@@ -189,11 +196,16 @@ def plot_tsne(
         size=size,
         return_fig=True,
     )
+    if classifier_key(color) is not None:
+        labels = adata_plot.obs[color]
+        levels = labels.cat.categories if isinstance(labels.dtype, pd.CategoricalDtype) else labels.unique()
+        palette = classifier_palette(color, levels)
     if palette is not None:
         kwargs["palette"] = palette
     if sort_order is not None:
         kwargs["sort_order"] = sort_order
     fig = sc.pl.embedding(adata_plot, **kwargs)
+    finalize_figure_labels(fig, classifier=color)
     save_figure(fig, out_stem, repo_root=repo_root, preview=preview)
     plt.close(fig)
     gc.collect()

@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from .display_labels import classifier_display_label, finalize_figure_labels
+
 from colorsys import rgb_to_hsv
 from pathlib import Path
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 
+from .classifier_colors import classifier_key, classifier_palette, is_missing_label, missing_color
 from .integration_figures import DONUT_COLOR_PALETTES, LOCATION_RECODE, configure_matplotlib
 
 LOCATION_ORDER = ["PCNS", "bone", "nodal", "testis", "other"]
@@ -30,16 +34,7 @@ MOLECULAR_COLUMN_SPECS: list[tuple[str, str]] = [
 ]
 
 # Subtype labels not in the shared donut palette
-PALETTE_EXTRAS: dict[str, dict[str, str]] = {
-    "Wright 2020\nLymphgen": {
-        "MCD/ST2": "purple",
-        "EZB/ST2": "darkorange",
-        "N1": "#b3de69",
-        "A53": "#bc80bd",
-    },
-    "Chapuy 2025\nDLBclass": {"C2": "#4daf4a"},
-    "Shen 2023\nLymphPlex": {"Other": "lightgray"},
-}
+PALETTE_EXTRAS: dict[str, dict[str, str]] = {}  # Classifier additions belong in config/classifier_colors.json.
 
 # Harmonize cross-classifier residual labels for display / legend.
 LABEL_DISPLAY_ALIASES: dict[str, dict[str, str]] = {
@@ -144,7 +139,7 @@ def prepare_pie_patchwork_table(meta: pd.DataFrame) -> tuple[pd.DataFrame, list[
 
 def _display_label(label: str, value: str) -> str:
     aliases = LABEL_DISPLAY_ALIASES.get(label, {})
-    return aliases.get(str(value), str(value))
+    return classifier_display_label(label, aliases.get(str(value), str(value)))
 
 
 def _legend_entries_for_column(
@@ -177,7 +172,11 @@ def _legend_entries_for_column(
 
 
 def _palette_for_column(col: str, label: str, values: pd.Series) -> tuple[dict[str, str], list[str]]:
-    base = dict(DONUT_COLOR_PALETTES.get(label, {}))
+    name = col if classifier_key(col) is not None else label
+    if classifier_key(name) is not None:
+        base = classifier_palette(name, values)
+    else:
+        base = dict(DONUT_COLOR_PALETTES.get(label, {}))
     base.update(PALETTE_EXTRAS.get(label, {}))
     if base:
         supervised_order = SUPERVISED_LEVEL_ORDER.get(label, [])
@@ -316,8 +315,10 @@ def plot_location_pie_patchwork(
 
     fig.tight_layout()
     out_svg.parent.mkdir(parents=True, exist_ok=True)
+    finalize_figure_labels(fig)
     fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if show:
+        finalize_figure_labels(plt.gcf())
         plt.show()
     plt.close(fig)
 
@@ -341,7 +342,7 @@ def plot_location_pie_patchwork(
         legend_fig, legend_ax = plt.subplots(figsize=(6, legend_h))
         y = 0.98
         for label, entries in legend_sections:
-            legend_ax.text(0.01, y, label, fontsize=title_fontsize, fontweight="bold", va="top")
+            legend_ax.text(0.01, y, label.replace("\n", " "), fontsize=title_fontsize, fontweight="bold", va="top")
             y -= line_step
             for k, v in entries:
                 legend_ax.add_patch(
@@ -369,14 +370,36 @@ def plot_location_pie_patchwork(
         legend_ax.axis("off")
         if legend_svg is not None:
             legend_svg.parent.mkdir(parents=True, exist_ok=True)
+            finalize_figure_labels(legend_fig)
             legend_fig.savefig(legend_svg, format="svg", bbox_inches="tight")
             legend_path = legend_svg
         if legend_png is not None:
             legend_png.parent.mkdir(parents=True, exist_ok=True)
+            finalize_figure_labels(legend_fig)
             legend_fig.savefig(legend_png, dpi=300, bbox_inches="tight")
         plt.close(legend_fig)
 
     return out_svg, legend_path
+
+
+def stacked_bar_cohort(df: pd.DataFrame, col: str, *, required_calls=()) -> pd.DataFrame:
+    """Use the same embedded-genomic-data cohort for every genomic classifier.
+
+    The existing genomic_tested flag is based on source alteration records,
+    not independently verified sequencing success. Missing classifier calls
+    within that cohort remain visible; Other is a recorded residual category.
+    """
+    if col not in GENOMIC_CLASSIFIER_COLS:
+        return df
+    if "genomic_tested" not in df:
+        raise KeyError("Genomic bars require the genomic_tested availability flag")
+    flag = df["genomic_tested"]
+    if not flag.dropna().isin([True, False]).all():
+        raise ValueError("genomic_tested must contain Boolean availability flags")
+    keep = flag.fillna(False).astype(bool)
+    for classifier in required_calls:
+        keep &= ~df[classifier].map(normalize_value).map(is_missing_label)
+    return df.loc[keep].copy()
 
 
 def plot_location_stacked_bar_patchwork(
@@ -388,14 +411,17 @@ def plot_location_stacked_bar_patchwork(
     out_png: Path | None = None,
     show: bool = False,
     location_order: list[str] | tuple[str, ...] = tuple(LOCATION_ORDER),
-    row_height: float = 1.7,
+    row_height: float = 2.5,
     width: float = 13.5,
     title: str | None = None,
 ) -> Path:
     """Row-normalized horizontal stacked bars for location × classifier composition.
 
     Rows are classifiers, y-axis bars are tumor locations, and each horizontal
-    bar sums to one within the corresponding location.
+    bar sums to one within the corresponding available-data cohort. Genomic
+    panels share the same record-availability and recorded-call filters.
+    Other stays in the middle of the subtype stack. Legends
+    follow segment order and N reports the plotted denominator.
     """
     configure_matplotlib()
 
@@ -422,37 +448,66 @@ def plot_location_stacked_bar_patchwork(
     )
     axes = np.atleast_1d(axes)
     y = np.arange(len(locations))
-    location_n = {loc: int((df["Location"] == loc).sum()) for loc in locations}
 
+    required_calls = tuple(c for c in cols if c in GENOMIC_CLASSIFIER_COLS)
     for ax, col in zip(axes, cols, strict=True):
         label = label_by_col[col]
+        cohort = stacked_bar_cohort(df, col, required_calls=required_calls)
+        location_n = {loc: int(cohort["Location"].eq(loc).sum()) for loc in locations}
+        # Display-only normalization; patient assignments remain unchanged.
+        display_values = cohort[col].map(normalize_value).map(
+            lambda value: "unknown" if is_missing_label(value) else value
+        )
         palette = col_palettes[col]
         observed_values: list[str] = []
         for location in locations:
-            loc_values = df.loc[df["Location"].eq(location), col].map(normalize_value)
+            loc_values = display_values.loc[cohort["Location"].eq(location)]
             observed_values.extend([str(v) for v in pd.unique(loc_values)])
         observed = [v for v in col_orders[col] if v in set(observed_values)]
         observed += sorted(v for v in set(observed_values) if v not in observed)
+        # Preserve the supervised biological order, including Other in the middle.
+        residuals = [v for v in observed if v.casefold() in {"other", "others", "unclassified", "unassigned"}
+                     or (classifier_key(col) == "dlbclass" and v == "0")]
+        missing = [v for v in observed if is_missing_label(v)]
+        observed = [v for v in observed if v not in missing]
+        if label not in SUPERVISED_LEVEL_ORDER:
+            others = [v for v in observed if v.casefold() in {"other", "others"}]
+            called = [v for v in observed if v not in others]
+            midpoint = len(called) // 2
+            observed = called[:midpoint] + others + called[midpoint:]
+        observed += missing
+        if missing:
+            palette = {**palette, **dict.fromkeys(missing, missing_color())}
+        legend_handles = []
         lefts = np.zeros(len(locations), dtype=float)
         for value in observed:
             props = []
             counts = []
             for location in locations:
-                loc_values = df.loc[df["Location"].eq(location), col].map(normalize_value)
+                loc_values = display_values.loc[cohort["Location"].eq(location)]
                 denom = int(len(loc_values))
                 count = int(loc_values.eq(value).sum())
                 props.append(count / denom if denom else 0.0)
                 counts.append(count)
             color = palette.get(value, "#cccccc")
+            unavailable = is_missing_label(value)
+            display = ("No recorded assignment" if unavailable else
+                       "Unclassified" if classifier_key(col) == "dlbclass" and value == "0" else
+                       _display_label(label, value))
             bars = ax.barh(
                 y,
                 props,
                 left=lefts,
                 height=0.72,
                 color=color,
-                edgecolor="white",
+                edgecolor="#777777" if unavailable else "white",
                 linewidth=0.5,
+                hatch="////" if unavailable else None,
             )
+            legend_handles.append(Patch(
+                facecolor=color, edgecolor="#777777" if unavailable else "white",
+                linewidth=0.5, hatch="////" if unavailable else None, label=display,
+            ))
             for bar, prop, count in zip(bars, props, counts, strict=True):
                 if prop < 0.10 or count == 0:
                     continue
@@ -460,15 +515,20 @@ def plot_location_stacked_bar_patchwork(
                 ax.text(
                     bar.get_x() + bar.get_width() / 2,
                     bar.get_y() + bar.get_height() / 2,
-                    f"{prop:.0%}",
+                    (f"No recorded call\n{prop:.0%}" if unavailable else
+                     f"{display}\n{prop:.0%}" if value in residuals else f"{prop:.0%}"),
                     ha="center",
                     va="center",
                     fontsize=8,
                     color=text_color,
                     fontweight="bold",
+                    bbox={"facecolor":color,"edgecolor":"none","pad":0.5} if unavailable else None,
                 )
             lefts += np.asarray(props, dtype=float)
 
+        ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(0, -0.22),
+                  ncol=min(len(legend_handles), 7), frameon=False, fontsize=8,
+                  borderaxespad=0, handlelength=1.5, columnspacing=1.2)
         ax.set_xlim(0, 1)
         ax.set_yticks(y)
         ax.set_yticklabels([f"{loc} (N={location_n[loc]})" for loc in locations], fontsize=9)
@@ -480,16 +540,29 @@ def plot_location_stacked_bar_patchwork(
 
     axes[-1].set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     axes[-1].set_xticklabels(["0", "25", "50", "75", "100"], fontsize=9)
-    axes[-1].set_xlabel("Fraction within location (%)")
+    axes[-1].set_xlabel("Fraction within plotted location cohort (%)", labelpad=42)
+    if any(col in GENOMIC_CLASSIFIER_COLS for col in cols):
+        genomic_col = required_calls[0]
+        available = stacked_bar_cohort(df, genomic_col)
+        included = stacked_bar_cohort(df, genomic_col, required_calls=required_calls)
+        pending = len(available) - len(included)
+        note = f"Common genomic cohort: {len(included)} cases with recorded calls; N is the plotted denominator."
+        if pending:
+            note += f" {pending} cases with incomplete classifier results are excluded."
+        fig.text(0.01, 0.005, note,
+                 fontsize=7, ha="left")
     if title:
         fig.suptitle(title, y=1.02)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
     out_svg.parent.mkdir(parents=True, exist_ok=True)
+    finalize_figure_labels(fig)
     fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if out_png is not None:
         out_png.parent.mkdir(parents=True, exist_ok=True)
+        finalize_figure_labels(fig)
         fig.savefig(out_png, dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(plt.gcf())
         plt.show()
     plt.close(fig)
     return out_svg

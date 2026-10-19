@@ -103,6 +103,7 @@ def execute_notebook_inprocess(nb_path: Path, *, timeout: int) -> float:
     logging.getLogger("IPKernelApp").setLevel(logging.ERROR)
     nb = nbformat.read(nb_path, as_version=4)
     km = KernelManager(kernel_name="python3")
+    km.kernel_spec.argv[0] = sys.executable  # Use this checkout's environment, not a global kernel.
     # Prefer IPv4 loopback; avoids some Windows ZMQ / interface discovery issues.
     km.ip = "127.0.0.1"
     client = NotebookClient(

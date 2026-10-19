@@ -1,0 +1,148 @@
+{
+  "name": "Lymph2Cx public-patent linear-score reconstruction",
+  "status": "score_only_portal_equivalence_unverified",
+  "sources": [
+    "https://patents.google.com/patent/WO2015069790A1/en",
+    "https://patents.google.com/patent/US10607717B2/en"
+  ],
+  "locator": "Table 6; normalization paragraph [0027]; score cutpoints [0033]; Bayesian parameters [0039]",
+  "features": [
+    {
+      "reference_gene": "ASB13",
+      "gene": "ASB13",
+      "normalization_weight": 0.0,
+      "coefficient": -66.35
+    },
+    {
+      "reference_gene": "CCDC50",
+      "gene": "CCDC50",
+      "normalization_weight": 0.0,
+      "coefficient": 40.54
+    },
+    {
+      "reference_gene": "CREB3L2",
+      "gene": "CREB3L2",
+      "normalization_weight": 0.0,
+      "coefficient": 65.79
+    },
+    {
+      "reference_gene": "CYB5R2",
+      "gene": "CYB5R2",
+      "normalization_weight": 0.0,
+      "coefficient": 67.72
+    },
+    {
+      "reference_gene": "IRF4",
+      "gene": "IRF4",
+      "normalization_weight": 0.0,
+      "coefficient": 71.92
+    },
+    {
+      "reference_gene": "ISY1",
+      "gene": "ISY1",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "ITPKB",
+      "gene": "ITPKB",
+      "normalization_weight": 0.0,
+      "coefficient": -67.78
+    },
+    {
+      "reference_gene": "LIMD1",
+      "gene": "LIMD1",
+      "normalization_weight": 0.0,
+      "coefficient": 61.92
+    },
+    {
+      "reference_gene": "MAML3",
+      "gene": "MAML3",
+      "normalization_weight": 0.0,
+      "coefficient": -58.59
+    },
+    {
+      "reference_gene": "MME",
+      "gene": "MME",
+      "normalization_weight": 0.0,
+      "coefficient": -56.55
+    },
+    {
+      "reference_gene": "MYBL1",
+      "gene": "MYBL1",
+      "normalization_weight": 0.0,
+      "coefficient": -72.92
+    },
+    {
+      "reference_gene": "PIM2",
+      "gene": "PIM2",
+      "normalization_weight": 0.0,
+      "coefficient": 71.8
+    },
+    {
+      "reference_gene": "R3HDM1",
+      "gene": "R3HDM1",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "RAB7L1",
+      "gene": "RAB29",
+      "normalization_weight": 0.0,
+      "coefficient": 70.45
+    },
+    {
+      "reference_gene": "S1PR2",
+      "gene": "S1PR2",
+      "normalization_weight": 0.0,
+      "coefficient": -78.74
+    },
+    {
+      "reference_gene": "SERPINA9",
+      "gene": "SERPINA9",
+      "normalization_weight": 0.0,
+      "coefficient": -61.81
+    },
+    {
+      "reference_gene": "TNFRSF13B",
+      "gene": "TNFRSF13B",
+      "normalization_weight": 0.0,
+      "coefficient": 66.49
+    },
+    {
+      "reference_gene": "TRIM56",
+      "gene": "TRIM56",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "UBXN4",
+      "gene": "UBXN4",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "WDR55",
+      "gene": "WDR55",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    }
+  ],
+  "published_cutpoints": [
+    1988.2,
+    2513.9
+  ],
+  "published_bayesian_parameters": {
+    "m1": 916.74,
+    "m2": -449.76,
+    "v1": 294.24,
+    "v2": 343.55
+  },
+  "limitations": [
+    "Published score cutpoints and Bayesian parameters are not demonstrably on the same calibrated scale.",
+    "The published Bayesian equation repeats the same density in its denominator; a literal implementation would always return 0.5. We do not silently repair it and claim portal equivalence.",
+    "Batch reference/gold-standard calibration, current portal parameters, zero-count handling and QC remain unverified.",
+    "RNA-seq and microarray expression are not validated NanoString assay inputs. No subtype calls or per-label recall/precision are emitted."
+  ],
+  "source_sha256": "e9de72db9115c754beee659269cf2bb2ec47dc4dc729f47156ecac139c9e077b"
+}

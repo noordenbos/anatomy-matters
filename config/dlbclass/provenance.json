@@ -1,0 +1,15 @@
+{
+  "paper": "https://doi.org/10.1182/blood.2024025652",
+  "reference_source": "https://github.com/getzlab/DLBclass-tool",
+  "reference_gsm_sha256": "cddddf560e913a48664062e8a5abc8a60b7c68c960d35c6b72a77856351325ca",
+  "reference_n": 699,
+  "reference_mean_definition": "Row mean of encoded feature values across all 699 reference cases, as in the author panel-classification notebooks; not binary event prevalence.",
+  "panel_source": "https://doi.org/10.1038/s41408-025-01291-z",
+  "coverage_audit_sha256": "c548886974600c2e427c583707854e90d1159d276a2ecd7c52aff5eb857e1552",
+  "coverage_assumption": "User approved provisional assumption on 2026-10-11: all profiled cases measured with BLYMFv2. Per-case panel and callability remain unverified.",
+  "reduction": "Linear weights derived from official construct_reduced_winning_version applied to an identity basis. Numerically equivalent for integral inputs; preserves fractional means that the original astype(int) truncates.",
+  "format_data_sha256": "bcd3b4ff58de551fcfb189f15ecbe60c59045ba80937d7dd9bb692ca03b1c946",
+  "mutation_encoding": "Existing selected nonsilent mutation calls recoded 1 to 2; existing 2 retained. No new variants selected.",
+  "cnv": "Regional CN features unavailable; gene-only discovery CN calls cannot determine regional calls.",
+  "fish": "Final translocation table: measured 0/1 -> GSM 0/3; missing -> reference mean."
+}

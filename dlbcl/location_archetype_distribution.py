@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -194,11 +196,14 @@ def plot_location_archetype_heatmaps(
     if out_path is not None:
         path = Path(out_path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        finalize_figure_labels(fig)
         fig.savefig(path, format=path.suffix.lstrip(".") or "svg", bbox_inches="tight")
         if path.suffix.lower() != ".png":
+            finalize_figure_labels(fig)
             fig.savefig(path.with_suffix(".png"), format="png", dpi=300, bbox_inches="tight")
 
     if show:
+        finalize_figure_labels(plt.gcf())
         plt.show()
     else:
         plt.close(fig)
@@ -257,11 +262,14 @@ def plot_archetype_pies_by_location(
     if out_path is not None:
         path = Path(out_path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        finalize_figure_labels(fig)
         fig.savefig(path, format=path.suffix.lstrip(".") or "svg", bbox_inches="tight", dpi=300)
         if path.suffix.lower() != ".png":
+            finalize_figure_labels(fig)
             fig.savefig(path.with_suffix(".png"), format="png", dpi=300, bbox_inches="tight")
 
     if show:
+        finalize_figure_labels(plt.gcf())
         plt.show()
     else:
         plt.close(fig)
