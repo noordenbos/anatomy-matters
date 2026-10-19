@@ -256,15 +256,15 @@ notebook('transcriptomic_classification_audit.ipynb',trans)
 # Genomic notebook is assembled below after the feature contracts.
 gen=[M('''# Genomic classification audit
 
-Four classifiers, separate feature matrices and missing-data rules. Rebuild from selected variants, FISH measurements and declared panels embedded in the release AnnData, run native LymphGen/DLBclass and auditable HMRN/LymphPlex adapters, compare with current calls, then replace the authoritative AnnData fields with a backup and verified atomic write.
+Four classifiers, separate feature matrices and missing-data rules. Rebuild from selected variants, FISH measurements and declared panels embedded in the release AnnData, run native LymphGen/DLBclass/LymphPlex and an auditable HMRN adapter, compare with current calls, then replace the authoritative AnnData fields with a backup and verified atomic write.
 
 **Input scope:** existing pathogenic-variant selection and AF >2% (or missing AF) are retained. This is not a new somatic-variant calling pipeline. Discovery panel assignments were recorded in the source workbook and are embedded with these inputs; validation BLYMFv2 remains a provisional study assumption. Absence of variants is not sufficient evidence that a patient was sequenced. Cases outside the explicit source manifest are listed. The explicitly declared discovery cases with unavailable source inputs have their unsupported calls cleared to unknown; other noneligible cases are retained.
 
-**Method status:** HMRN partial-input prediction and LymphPlex missing-input abstention below are transparent research adaptations. They are not claimed as author-validated extensions. The public reference models and original complete-input algorithms are verified separately.'''),C(setup+'''
+**Method status:** HMRN observed-feature prediction is a research extension. LymphPlex runs the unmodified author function with numeric NA inputs, using native PAM missing-value handling; incomplete-panel performance was not separately validated in the publication. Coverage, exact-completion sensitivity and public example masking results are reported separately from subtype labels.'''),C(setup+'''
 OUT=Path(config['output_root'])/'genomic';OUT.mkdir(parents=True,exist_ok=True)
 VENDOR=Path(config['vendor'])
 require_audit_resources(config, 'genomic')
-METHOD_FILES={str(p):sha256(p) for p in [CONFIG_PATH,ROOT/'dlbcl/classification_audit.py',ROOT/'dlbcl/genomic_classification_audit.py',ROOT/'tools/classification_audit/prepare_genomic.py',ROOT/'tools/classification_audit/run_lymphgen.R',*sorted((ROOT/'config/dlbclass').glob('*')),*sorted((ROOT/'config/classification_audit').glob('hmrn*'))] if p.is_file()}
+METHOD_FILES={str(p):sha256(p) for p in [CONFIG_PATH,ROOT/'dlbcl/classification_audit.py',ROOT/'dlbcl/genomic_classification_audit.py',ROOT/'tools/classification_audit/prepare_genomic.py',ROOT/'tools/classification_audit/run_lymphgen.R',ROOT/'tools/classification_audit/run_lymphplex.R',*sorted((ROOT/'config/dlbclass').glob('*')),*sorted((ROOT/'config/classification_audit').glob('hmrn*'))] if p.is_file()}
 '''),M('''## 1. Rebuild classifier inputs from released selected variants, panel masks and measured FISH
 
 The release contains selected mutation events and measurement availability in `uns["classification_inputs"]`, independently of the saved classifier calls. Raw variant calling and the upstream pathogenic/AF selection are outside this notebook. The preparation code is printed in full before execution. It retains approved gene/Entrez mappings, hotspot and truncating consequences, source variant coordinates, and per-case panel assignments. Measured-negative FISH is 0, positive is 1, unavailable is missing. No regional copy number is inferred. DLBclass encodes synonymous/nonsynonymous/SV events as 1/2/3 before feature-specific mean imputation. HMRN and LymphPlex have their own binary encodings in later cells.'''),C('''prepare=ROOT/'tools/classification_audit/prepare_genomic.py'
@@ -352,53 +352,74 @@ for short,cohort in [('discovery','Discovery'),('validation','Validation')]:
     posterior.to_csv(OUT/f'{cohort}_hmrn_posteriors.csv')
     x.to_csv(OUT/f'{cohort}_hmrn_features.csv');evidence.to_csv(OUT/f'{cohort}_hmrn_feature_evidence.csv',index=False)
     display(calls.value_counts().rename(cohort))
-'''),M('''## 5. LymphPlex: preserve missing FISH and test all completions
+'''),M('''## 5. LymphPlex: native assignment with missing inputs
 
-The author algorithm first applies a unique seed pattern; otherwise it assigns the nearest fixed PAM center (Euclidean distance). TP53 mutation overrides the result. Its complete-input function does not define an unknown-FISH policy.
+Run the unmodified author `GetCluster` function with numeric `NA` values. A unique observed seed pattern takes precedence; otherwise native PAM compares available features with the fixed centers. TP53 mutation overrides the result. The missing-distance rescaling is common across centers for each case. Measured negatives remain 0; off-panel genes and unavailable FISH remain missing. No zero or mean imputation is performed. TP53 must be measured, and non-TP53 cases need at least one measured center feature; this is an execution safeguard, not a validated minimum-coverage threshold.
 
-Here, measured mutation negatives remain 0; off-panel genes and unavailable BCL2/BCL6 FISH remain missing. Enumerate all binary completions of those inputs and execute the same rule for each. Keep the subtype only if every completion agrees; otherwise use **Unassigned** and export the possible labels. `Others` is a real native output and remains distinct from Unassigned. No probabilities are assigned to hypothetical completions. This is a conservative research extension, not a new trained classifier. [Original algorithm](https://github.com/difuSJTU/LymphPlex).'''),C('''from dlbcl.genomic_classification_audit import lymphplex_features, lymphplex_complete, lymphplex_partial
-print(inspect.getsource(lymphplex_complete)); print(inspect.getsource(lymphplex_partial))
+The paper does not separately prescribe or validate incomplete-panel handling. Native PAM supports missing values. We retain feature coverage and exhaustive binary-completion sensitivity as annotations; disagreement among hypothetical completions does **not** prevent a native subtype call. `Others` is the native residual category. Cases with no genomic source data remain unknown outside this eligible cohort.
+
+[Author code](https://github.com/difuSJTU/LymphPlex), [paper](https://www.nature.com/articles/s41392-023-01358-y), [PAM missing-value support](https://stat.ethz.ch/R-manual/R-devel/library/cluster/html/pam.html).'''),C('''from dlbcl.genomic_classification_audit import (lymphplex_features, lymphplex_partial,
+    lymphplex_observed, lymphplex_native)
+print(inspect.getsource(lymphplex_native)); print(inspect.getsource(lymphplex_observed))
+print((ROOT/'tools/classification_audit/run_lymphplex.R').read_text())
 centers=pd.read_csv(VENDOR/'LymphPlex/Centers.txt',sep='\\t',index_col=0)
 seeds=pd.read_csv(VENDOR/'LymphPlex/Seeds.txt',sep='\\t')
-# Independent native-R parity test on every completed feature vector used below.
-complete_inputs=[];expected=[];id_counter=0
+lymphplex_auxiliary={}
 for short,cohort in [('discovery','Discovery'),('validation','Validation')]:
     c=cases[cases.cohort.eq(short)];v=variants[variants.cohort.eq(short)]
     fish=pd.read_csv(OUT/f'{short}_fish.csv',index_col=0)
     x=lymphplex_features(v,c,panel,centers,fish,canon)
-    calls,completions=lymphplex_partial(x,centers,seeds)
-    updates[cohort]['LymphPlex']=calls['call'].reindex(updates[cohort].index)
+    native=lymphplex_native(x,VENDOR/'LymphPlex',config['rscript'],OUT/f'{cohort}_lymphplex_native')
+    sensitivity,completions=lymphplex_partial(x,centers,seeds)
+    calls=sensitivity.rename(columns={'call':'completion_consensus','status':'completion_status'})
+    calls.insert(0,'call',native)
+    calls['completion_invariant']=calls.completion_consensus.ne('Unassigned')
+    calls['n_measured']=x.notna().sum(axis=1);calls['n_required']=len(x.columns)
+    calls['status']=np.where(x.isna().any(axis=1),'native_PAM_partial_inputs','native_complete_inputs')
+    updates[cohort]['LymphPlex']=native.reindex(updates[cohort].index)
     x.to_csv(OUT/f'{cohort}_lymphplex_features.csv');calls.to_csv(OUT/f'{cohort}_lymphplex_audit.csv')
     completions.to_csv(OUT/f'{cohort}_lymphplex_completions.csv',index=False)
-    import itertools
-    for pid,row in x.iterrows():
-        missing=row.index[row.isna()]
-        for values in itertools.product([0.,1.],repeat=len(missing)):
-            filled=row.copy();filled.loc[missing]=values
-            filled['Sample']=f'audit_{id_counter}';id_counter+=1
-            complete_inputs.append(filled)
-            expected.append(lymphplex_complete(filled.drop('Sample'),centers,seeds))
-    display(calls.groupby(['call','status']).size().rename(cohort))
-all_complete=pd.DataFrame(complete_inputs)
-all_complete[['Sample',*centers.columns,'TP53']].to_csv(OUT/'lymphplex_complete_inputs.tsv',sep='\\t',index=False)
-parity_r=r\'''args <- commandArgs(TRUE)
-suppressPackageStartupMessages({library(cluster);library(dplyr);library(reshape2)})
-source(file.path(args[1],'Functions.R'))
-x <- read.delim(args[2],check.names=FALSE)
-c <- read.delim(file.path(args[1],'Centers.txt'),check.names=FALSE)
-s <- read.delim(file.path(args[1],'Seeds.txt'),check.names=FALSE)
-r <- GetCluster(x[,c('Sample',setdiff(names(c),'Group'))],c,s)
-r[x$TP53==1,2] <- 'TP53'
-write.table(r,args[3],sep='\\t',quote=FALSE,row.names=FALSE,col.names=c('Sample','call'))
-\'''
-script=OUT/'lymphplex_native_parity.R';script.write_text(parity_r)
-run([config['rscript'],script,VENDOR/'LymphPlex',OUT/'lymphplex_complete_inputs.tsv',OUT/'lymphplex_native_calls.tsv'],OUT/'lymphplex_native_parity.log')
-native=pd.read_csv(OUT/'lymphplex_native_calls.tsv',sep='\\t').set_index('Sample')['call']
-assert all(native.loc[row.Sample] in possibilities for row,possibilities in zip(all_complete.itertuples(),expected))
-print('Native algorithm parity verified for',len(all_complete),'complete input combinations.')
-'''),M('''## 6. Before/after audit and authoritative replacement
+    prefix='uns' if cohort=='Discovery' else 'uns/validation_cohort'
+    lymphplex_auxiliary[prefix+'/lymphplex_call_audit']=calls
+    lymphplex_auxiliary[prefix+'/lymphplex_input_method']={
+        'algorithm':'Author GetCluster with fixed PAM centers and TP53 override',
+        'missing':'Numeric NA; native available-feature distances; no imputation',
+        'sensitivity':'All binary completions are retained as a robustness annotation, not a call gate',
+        'scope':'Cases with explicit genomic source inputs; TP53 measured',
+        'limitation':'Incomplete-panel clinical accuracy not separately validated by authors',
+        'publication':'https://www.nature.com/articles/s41392-023-01358-y',
+        'author_code':'https://github.com/difuSJTU/LymphPlex'}
+    display(calls.groupby(['call','completion_invariant']).size().rename(cohort))
+'''),M('''### Public example masking check
 
-Promotion includes only the explicitly eligible genomic cases. Cases with unavailable source inputs are listed in `eligibility.csv`. T29, T41 and T48 have their unsupported calls cleared to unknown, as explicitly specified in the configuration; their old calls remain in the audit backups. Other noneligible cases are retained. Absence from this source is not converted into a negative genotype. The current source hash is checked again and unrelated AnnData contents are verified unchanged. Frozen HMRN biological names and explicit LymphPlex Unassigned calls avoid misleading numeric subtype labels or invented negatives.'''),C('''# Explicit source-unavailability correction; never infer a negative genotype from no rows.
+Rerun the author-supplied example matrix with full inputs and then mask the two BLYMFv2-missing genes, optionally also BCL6 or both BCL2/BCL6 rearrangements. Report agreement and per-label recall/precision against the full-input **native calls**, not against the unrelated label column in the example files. This is a reproducibility sensitivity check, not an independent clinical validation. TP53 priority contributes substantially to overall agreement; also show non-TP53 agreement and label-specific results. These external examples never define study labels or fit a new model.'''),C('''example=pd.read_csv(VENDOR/'LymphPlex/Matrix.txt',sep='\\t',dtype={'Sample':str}).set_index('Sample')
+tp53=pd.read_csv(VENDOR/'LymphPlex/TP53.txt',sep='\\t',dtype={'Sample':str}).set_index('Sample')
+assert example.index.equals(tp53.index)
+example['TP53']=tp53.TP53
+baseline=lymphplex_native(example,VENDOR/'LymphPlex',config['rscript'],OUT/'lymphplex_example/full')
+masks={'genes':['DDX3X','ZFP36L1'],
+       'genes_BCL6':['DDX3X','ZFP36L1','BCL6'],
+       'genes_both_FISH':['DDX3X','ZFP36L1','BCL2','BCL6']}
+summary=[];metrics=[]
+for name,features in masks.items():
+    masked=example.copy();masked[features]=np.nan
+    calls=lymphplex_native(masked,VENDOR/'LymphPlex',config['rscript'],OUT/'lymphplex_example'/name)
+    matches=calls.eq(baseline);non_tp53=baseline.ne('TP53')
+    summary.append(dict(mask=name,n=len(calls),matches=int(matches.sum()),agreement=float(matches.mean()),
+                        non_TP53_n=int(non_tp53.sum()),non_TP53_agreement=float(matches[non_tp53].mean())))
+    pd.crosstab(baseline,calls,rownames=['full'],colnames=['masked']).to_csv(OUT/f'lymphplex_example_{name}_confusion.csv')
+    for label in sorted(set(baseline)|set(calls)):
+        true=baseline.eq(label);pred=calls.eq(label);tp=int((true&pred).sum())
+        metrics.append(dict(mask=name,label=label,n_full=int(true.sum()),n_masked=int(pred.sum()),
+            recall=tp/true.sum() if true.any() else np.nan,precision=tp/pred.sum() if pred.any() else np.nan))
+summary=pd.DataFrame(summary);metrics=pd.DataFrame(metrics)
+summary.to_csv(OUT/'lymphplex_example_agreement.csv',index=False)
+metrics.to_csv(OUT/'lymphplex_example_label_metrics.csv',index=False)
+display(summary);display(metrics)
+'''),
+M('''## 6. Before/after audit and authoritative replacement
+
+Promotion includes only the explicitly eligible genomic cases. Cases with unavailable source inputs are listed in `eligibility.csv`. T29, T41 and T48 have their unsupported calls cleared to unknown, as explicitly specified in the configuration; their old calls remain in the audit backups. Other noneligible cases are retained. Absence from this source is not converted into a negative genotype. The current source hash is checked again and unrelated AnnData contents are verified unchanged. HMRN biological names and native LymphPlex labels are kept separate from missing-input and sensitivity annotations. Unavailable genomic source inputs remain unknown.'''),C('''# Explicit source-unavailability correction; never infer a negative genotype from no rows.
 cleared=[]
 for pid in config.get('clear_unavailable_discovery_calls',[]):
     if pid not in updates['Discovery'].index:
@@ -418,7 +439,7 @@ for cohort,new in updates.items():
         rows.append(dict(cohort=cohort,classifier=col,n=len(new),changed=int((old[col].reindex(new.index).astype(str) if col in old else pd.Series('',index=new.index)).ne(new[col].astype(str)).sum())))
 display(pd.DataFrame(rows))
 # Replace accompanying DLBclass scores/method metadata so they cannot describe old calls.
-auxiliary={}
+auxiliary=dict(lymphplex_auxiliary)
 for short,cohort in [('discovery','Discovery'),('validation','Validation')]:
     prefix='uns' if cohort=='Discovery' else 'uns/validation_cohort'
     scores=pd.read_csv(OUT/'dlbclass'/short/'fresh_results.tsv',sep='\\t',index_col=0)
@@ -437,7 +458,7 @@ auxiliary['uns/lymphgen_discovery_method']={
 
 provenance={'config':config,'method_files':METHOD_FILES,'input_manifest':json.loads((OUT/'input_manifest.json').read_text()),
             'hmrn_reference':hmrn_meta,'cleared_unavailable_discovery_calls':cleared,'HMRN_partial_input':'Observed-feature Bernoulli likelihood; CN and incomplete SHM negatives marginalized',
-            'LymphPlex_partial_input':'Exact binary completion invariance; abstain when completions disagree',
+            'LymphPlex_partial_input':'Native author GetCluster/PAM with numeric NA, observed-feature distances, TP53 override; no imputation; completion sensitivity does not gate labels',
             'limitations':'Pathogenic-selected variants; panel coverage is not sample-level callable-base coverage; validation BLYMFv2 provisional'}
 (OUT/'run_provenance.json').write_text(json.dumps(provenance,indent=2))
 if UPDATE_ADATA:

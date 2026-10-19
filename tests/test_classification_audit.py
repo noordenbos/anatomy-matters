@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from anndata.io import write_elem, read_elem
 from dlbcl.classification_audit import preprocess_expression, promote_calls, sha256, CASE_KEYS
-from dlbcl.genomic_classification_audit import bernoulli_posterior, hmrn_features, lymphplex_partial
+from dlbcl.genomic_classification_audit import bernoulli_posterior, hmrn_features, lymphplex_partial, lymphplex_observed
 
 class AuditTests(unittest.TestCase):
     def test_scale_and_no_double_correction(self):
@@ -46,6 +46,23 @@ class AuditTests(unittest.TestCase):
         calls,_=lymphplex_partial(x,centers,seeds)
         self.assertEqual(calls.loc['unknown','call'],'Unassigned')
         self.assertEqual(calls.loc['tp53','call'],'TP53')
+    def test_native_observed_features_do_not_fill_missing_as_negative(self):
+        centers=pd.DataFrame({'measured':[.8,.9],'missing':[0.,1.]},index=['A','B'])
+        seeds=pd.DataFrame(columns=['Cluster','Seed'])
+        row=pd.Series({'measured':1.,'missing':np.nan,'TP53':0.})
+        self.assertEqual(lymphplex_observed(row,centers,seeds),{'B'})
+        self.assertEqual(lymphplex_observed(row.fillna(0),centers,seeds),{'A'})
+    def test_native_observed_seed_requires_known_positive_and_tp53_overrides(self):
+        centers=pd.DataFrame({'g':[0.,1.],'missing':[0.,1.]},index=['A','B'])
+        seeds=pd.DataFrame({'Cluster':['A','B','B'],'Seed':['g','g','missing']})
+        row=pd.Series({'g':1.,'missing':np.nan,'TP53':0.})
+        self.assertEqual(lymphplex_observed(row,centers,seeds),{'A'})
+        row[:]=np.nan;row.TP53=1
+        self.assertEqual(lymphplex_observed(row,centers,seeds),{'TP53'})
+    def test_native_observed_rejects_unsupported_priority_or_empty_evidence(self):
+        centers=pd.DataFrame({'g':[0.,1.]},index=['A','B']);seeds=pd.DataFrame(columns=['Cluster','Seed'])
+        for row in [{'g':0.,'TP53':np.nan},{'g':np.nan,'TP53':0.},{'g':2.,'TP53':0.}]:
+            with self.assertRaises(ValueError):lymphplex_observed(pd.Series(row),centers,seeds)
     def test_transaction_and_stale_input(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'data.h5ad'

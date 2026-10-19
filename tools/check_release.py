@@ -45,6 +45,13 @@ def check(root=ROOT,require_published=False):
             errors.append('Invalid public clinical input fields or identifiers')
         inputs=read_elem(f['uns/classification_inputs'])
         if inputs['cases'].groupby('cohort').size().to_dict()!={'discovery':61,'validation':221}:errors.append('Incorrect genomic input case counts')
+        for prefix,key in [('uns','uns/case_classifications'),('uns/validation_cohort','uns/validation_cohort/case_classification_validation')]:
+            audit=read_elem(f[prefix+'/lymphplex_call_audit'])
+            table=read_elem(f[key]);table=table.set_index('patient_id') if 'patient_id' in table else table
+            calls=table['LymphPlex']
+            if not calls.reindex(audit.index).eq(audit['call']).all():errors.append('LymphPlex call/audit mismatch: '+prefix)
+            if audit['call'].isin(['Unassigned','unknown']).any():errors.append('Eligible LymphPlex cases lack native calls: '+prefix)
+            if audit['n_measured'].gt(audit['n_required']).any():errors.append('Invalid LymphPlex feature coverage')
         def visit(name,obj):
             if isinstance(obj,h5py.Dataset) and obj.dtype.kind in 'OUS' and obj.size<100000:
                 if private.search(str(obj.asstr()[()])):errors.append(f'Local path in AnnData:{name}')

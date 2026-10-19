@@ -106,3 +106,48 @@ def lymphplex_partial(x,centers,seeds,max_missing=12):
             status='invariant_across_missing_features' if len(possible)==1 else 'ambiguous_missing_features',
             possible_labels='|'.join(sorted(possible)),missing_features='|'.join(missing),n_completions=2**len(missing)))
     return pd.DataFrame(rows).set_index('patient_id'),pd.DataFrame(completions)
+
+
+def lymphplex_observed(x, centers, seeds):
+    """Independent check of native seed/PAM assignment using observed features.
+
+    Return every nearest-center tie for parity checks; native R determines the
+    actual label. TP53 must be measured. Missing inputs are never encoded as zero.
+    """
+    x=x.reindex([*centers.columns,'TP53']).astype(float)
+    if not x.dropna().isin([0,1]).all(): raise ValueError('Nonbinary LymphPlex input')
+    if pd.isna(x.TP53): raise ValueError('TP53 measurement required for priority rule')
+    if x.TP53==1: return {'TP53'}
+    seed_hits=[label for label,g in seeds.groupby('Cluster',sort=False) if x.reindex(g.Seed).eq(1).all()]
+    if len(seed_hits)==1: return set(seed_hits)
+    measured=x.reindex(centers.columns).dropna()
+    if measured.empty: raise ValueError('No measured LymphPlex center features')
+    # Native PAM rescales distances by the same missingness factor for every center.
+    distance=centers.loc[:,measured.index].sub(measured,axis=1).pow(2).sum(axis=1)
+    return set(distance.index[np.isclose(distance,distance.min(),rtol=0,atol=1e-12)])
+
+
+def lymphplex_native(x, vendor, rscript, output):
+    """Run author GetCluster/PAM on numeric NA inputs, with the TP53 override.
+
+    The paper does not separately validate incomplete panels. Preserve feature
+    coverage and completion sensitivity as annotations, not an abstention gate.
+    """
+    from .classification_audit import run
+    vendor=Path(vendor);output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    centers=pd.read_csv(vendor/'Centers.txt',sep='\t',index_col=0)
+    seeds=pd.read_csv(vendor/'Seeds.txt',sep='\t')
+    columns=[*centers.columns,'TP53']
+    if not x.index.is_unique or not set(columns)<=set(x): raise ValueError('Require unique cases and explicit classifier feature columns')
+    inputs=x.loc[:,columns].astype(float).copy()
+    expected={str(pid):lymphplex_observed(row,centers,seeds) for pid,row in inputs.iterrows()}
+    inputs.index=inputs.index.astype(str)
+    if not inputs.index.is_unique: raise ValueError('Case identifiers collide after string conversion')
+    inputs.rename_axis('Sample').to_csv(output/'inputs.tsv',sep='\t',na_rep='NA')
+    script=Path(__file__).resolve().parents[1]/'tools/classification_audit/run_lymphplex.R'
+    run([rscript,script,vendor,output/'inputs.tsv',output/'calls.tsv'],output/'native.log')
+    calls=pd.read_csv(output/'calls.tsv',sep='\t',dtype={'Sample':str}).set_index('Sample')['call']
+    if calls.index.tolist()!=inputs.index.tolist(): raise ValueError('Native output case identities differ')
+    if any(call not in expected[pid] for pid,call in calls.items()): raise ValueError('Native PAM differs from independent observed-feature calculation')
+    calls.index=x.index.copy()
+    return calls

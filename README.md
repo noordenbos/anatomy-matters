@@ -42,6 +42,8 @@ The two authoritative assignment tables are:
 - `uns["case_classifications"]` — discovery.
 - `uns["validation_cohort"]["case_classification_validation"]` — validation.
 
+LymphPlex coverage and completion sensitivity are recorded separately in `uns["lymphplex_call_audit"]` and `uns["validation_cohort"]["lymphplex_call_audit"]`. The canonical `LymphPlex` columns contain native subtype labels; the sensitivity flag does not act as an abstention rule.
+
 Clinical metadata and model scores are separate. Figure helpers read assignments from these tables. Figure 2 and Figure 5 can recalculate archetypes for transparency; `APPLY_RECOMPUTED_ASSIGNMENTS` defaults to false, and opting in affects only that notebook's in-memory data. It does not rewrite the released file.
 
 External cohorts have individual source/access records. If an unavailable source matrix is requested, the confidence notebooks raise an error identifying the source publication and access route. Archived benchmark metrics are not represented as rerun native model inference. The external-reference bundle does not contain this study's discovery or validation cohorts.
@@ -83,7 +85,7 @@ Genomic preparation starts with selected events, panel assignments and FISH meas
 |---|---|
 | LymphGen / DLBclass | Native reference model / author ensemble, with explicit panel masks and method-specific missingness |
 | HMRN | Reproduced author reference fit; observed-feature Bernoulli marginalization is a research extension |
-| LymphPlex | Native complete-input rules verified; missing-feature completion invariance and abstention are a research extension |
+| LymphPlex | Native author function with numeric NA and PAM available-feature distances; coverage and completion sensitivity retained separately; incomplete-panel accuracy not separately author-validated |
 | LymphoMAP / EcoTyper | Native author software with the declared input scale and cohort handling |
 | Kotlov / Ciavarella | Explicit cohort-dependent clustering reconstructions; Kotlov subtype naming uses external reference centroids |
 | Lymph2Cx | Full 15-predictor plus five-housekeeping-gene research reconstruction with externally frozen NanoString thresholds; not the proprietary clinical assay |

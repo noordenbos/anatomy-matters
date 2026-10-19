@@ -482,6 +482,9 @@ def plot_location_stacked_bar_patchwork(
             called = [v for v in observed if v not in others]
             midpoint = len(called) // 2
             observed = called[:midpoint] + others + called[midpoint:]
+        if classifier_key(col) == "lymphgen":
+            # Match the other genomic panels: MCD left, EZB right; Other stays between.
+            observed.reverse()
         observed += missing
         if missing:
             palette = {**palette, **dict.fromkeys(missing, missing_color())}

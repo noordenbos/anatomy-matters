@@ -59,5 +59,22 @@ class StackedBarAvailabilityTests(unittest.TestCase):
                 fig=closed.call_args.args[0]
                 self.assertEqual([t.get_text() for t in fig.axes[0].get_yticklabels()],
                                  ['bone (N=2)','nodal (N=0)'])
-                self.assertEqual([t.get_text() for t in fig.axes[0].get_legend().get_texts()],['Other','MCD'])
+                self.assertEqual([t.get_text() for t in fig.axes[0].get_legend().get_texts()],['MCD','Other'])
                 close(fig)
+
+    def test_lymphgen_stack_and_legend_put_mcd_left_and_ezb_right(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        import matplotlib.pyplot as plt
+        from dlbcl.location_pie_patchwork import plot_location_stacked_bar_patchwork
+        frame=pd.DataFrame({'Location':['bone']*3,'genomic_tested':[True]*3,
+                            'Lymphgen':['EZB','Other','MCD']})
+        close=plt.close
+        with TemporaryDirectory() as d, patch('dlbcl.location_pie_patchwork.plt.close') as closed:
+            plot_location_stacked_bar_patchwork(frame,['Lymphgen'],{'Lymphgen':'Wright 2020\nLymphgen'},out_svg=Path(d)/'bars.svg')
+            fig=closed.call_args.args[0];ax=fig.axes[0]
+            self.assertEqual([t.get_text() for t in ax.get_legend().get_texts()],['MCD','Other','EZB'])
+            self.assertAlmostEqual(ax.patches[0].get_x(),0.)
+            self.assertAlmostEqual(ax.patches[-1].get_x(),2/3)
+            close(fig)

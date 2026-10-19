@@ -2,18 +2,6 @@
   "version": "1.1.0",
   "verification_date": "2026-10-19",
   "python_dependencies": "fresh isolated installation; all installed packages compatible",
-  "scientific_payload": {
-    "unchanged_scientific_payload": true,
-    "payload_sha256": "be7e76cc3f7b31f42bfc1f59e7d9b586db59a1e2954a285fb95a9d9abd4ae86f",
-    "intentional_changes": [
-      "uns/classification_inputs",
-      "uns/discovery_clinical_elements",
-      "uns/release_version",
-      "uns/classification_audit_genomic/provenance_json",
-      "uns/classification_audit_transcriptomic/provenance_json"
-    ],
-    "source_adata_unchanged": true
-  },
   "fresh_call_comparison": [
     {
       "method_group": "genomic",
@@ -74,10 +62,10 @@
   ],
   "supplemental_benchmark_metrics": "identical to previous verified metrics; now derived from public AnnData",
   "tests": {
-    "unittest": 60,
+    "unittest": 64,
     "standalone": 7
   },
-  "full_figure_execution": "All 12 manuscript notebooks passed in the clean environment; Table 1 rerun with final embedded clinical inputs.",
+  "full_figure_execution": "All 12 manuscript notebooks passed after the native LymphPlex update; Figure 1 also rerun after reversing the LymphGen stack and legend.",
   "classifier_notebook_execution": "All 4 audit/confidence notebooks passed in the clean environment.",
   "clinical_table_verification": "Combined Table 1 exactly matches the existing analysis, with pseudonymised correction fields embedded.",
   "publication": "Pending user Zenodo upload and fixed record ID.",
@@ -86,8 +74,8 @@
     {
       "name": "DLBCL_location_2026.publish.h5ad",
       "path": "data/DLBCL_location_2026.h5ad",
-      "bytes": 635408428,
-      "sha256": "459324502fb9f7d62f929841eed56981b20b9b331d811d409a7e02447f7f169e"
+      "bytes": 636549348,
+      "sha256": "7d8ebb11c8eb938eee0376ac391326a116dbb34209429a93e1c2b280a81d70fe"
     },
     {
       "name": "panel_call_confidence.public.h5ad",
@@ -109,6 +97,32 @@
       "nodal": 15,
       "testis": 9
     },
-    "checks": "Genomic pie/bar denominator regression and full Figure 1 execution passed."
-  }
+    "checks": "Genomic pie/bar denominator regression, LymphGen MCD-left/EZB-right stack and legend regression, full Figure 1 execution and visual inspection passed."
+  },
+  "initial_packaging_verification": {
+    "unchanged_scientific_payload": true,
+    "payload_sha256": "be7e76cc3f7b31f42bfc1f59e7d9b586db59a1e2954a285fb95a9d9abd4ae86f",
+    "intentional_changes": [
+      "uns/classification_inputs",
+      "uns/discovery_clinical_elements",
+      "uns/release_version",
+      "uns/classification_audit_genomic/provenance_json",
+      "uns/classification_audit_transcriptomic/provenance_json"
+    ],
+    "source_adata_unchanged": true
+  },
+  "scientific_payload": {
+    "measurements_and_other_classifiers_unchanged": true,
+    "other_payload_sha256": "921f2cbe6396fed24456570145ca2c0b7b07a2c124e7f7e6a6ebb86fb2b5fafa",
+    "intentional_LymphPlex_changes": {
+      "Discovery": 17,
+      "Validation": 84
+    },
+    "all_other_case_columns_unchanged": true,
+    "original_working_adata_unchanged": true,
+    "previous_release_sha256": "459324502fb9f7d62f929841eed56981b20b9b331d811d409a7e02447f7f169e"
+  },
+  "fresh_call_comparison_status": "Native genomic audit rerun on final release asset: zero differences for all methods; transcriptomic inputs and assignments preserved.",
+  "LymphPlex_method": "Unmodified author GetCluster/PAM with numeric NA; TP53 override; no imputation",
+  "LymphPlex_example_benchmark": "config/classification_audit/lymphplex_missingness_benchmark.json"
 }
