@@ -27,3 +27,37 @@ class StackedBarAvailabilityTests(unittest.TestCase):
             stacked_bar_cohort(pd.DataFrame({'Location': ['bone']}), 'Lymphgen')
         with self.assertRaises(ValueError):
             stacked_bar_cohort(pd.DataFrame({'genomic_tested': ['False']}), 'DLBclass')
+
+    def test_pies_and_bars_exclude_unavailable_cases_and_report_actual_n(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        import matplotlib.pyplot as plt
+        from dlbcl.location_pie_patchwork import plot_location_pie_patchwork, plot_location_stacked_bar_patchwork
+        frame = pd.DataFrame({
+            'Location':['bone','bone','bone','nodal'],
+            'genomic_tested':[True,True,False,False],
+            'Lymphgen':['Other','MCD','EZB','ST2'],
+            'COO_NanoString':['ABC','GCB','ABC','GCB'],
+        })
+        labels={'Lymphgen':'Wright 2020\nLymphgen','COO_NanoString':'Cell of Origin'}
+        close=plt.close
+        with TemporaryDirectory() as d:
+            with patch('dlbcl.location_pie_patchwork.plt.close') as closed:
+                plot_location_pie_patchwork(frame,list(labels),labels,
+                    out_svg=Path(d)/'pies.svg',layout='classifiers_rows')
+                fig=closed.call_args.args[0]
+                self.assertEqual([[t.get_text() for t in ax.texts if t.get_text().startswith('N=')]
+                                  for ax in fig.axes], [['N=2'],['N=0'],['N=3'],['N=1']])
+                self.assertEqual(len(fig.axes[0].patches),2)
+                self.assertIn('50%', [t.get_text() for t in fig.axes[0].texts])
+                self.assertIn('No data',[t.get_text() for t in fig.axes[1].texts])
+                close(fig)
+            with patch('dlbcl.location_pie_patchwork.plt.close') as closed:
+                plot_location_stacked_bar_patchwork(frame,['Lymphgen'],labels,
+                    out_svg=Path(d)/'bars.svg')
+                fig=closed.call_args.args[0]
+                self.assertEqual([t.get_text() for t in fig.axes[0].get_yticklabels()],
+                                 ['bone (N=2)','nodal (N=0)'])
+                self.assertEqual([t.get_text() for t in fig.axes[0].get_legend().get_texts()],['Other','MCD'])
+                close(fig)

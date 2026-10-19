@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .display_labels import finalize_figure_labels
+from .plot_display import show_figure_inline
 
 from pathlib import Path
 from typing import Any
@@ -229,7 +230,7 @@ def plot_km_by_location(
     finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     finalize_figure_labels(fig)
-    plt.show(fig)
+    show_figure_inline(fig)
     plt.close(fig)
     if _REPO_ROOT is not None:
         log_wrote(out_path, _REPO_ROOT)
@@ -309,7 +310,7 @@ def plot_km_by_archetype(
     finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     finalize_figure_labels(fig)
-    plt.show(fig)
+    show_figure_inline(fig)
     plt.close(fig)
     if _REPO_ROOT is not None:
         log_wrote(out_path, _REPO_ROOT)

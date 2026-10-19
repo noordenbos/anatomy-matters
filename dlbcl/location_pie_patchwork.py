@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .display_labels import classifier_display_label, finalize_figure_labels
+from .plot_display import show_figure_inline
 
 from colorsys import rgb_to_hsv
 from pathlib import Path
@@ -208,18 +209,20 @@ def plot_location_pie_patchwork(
     classifiers (legacy anatomy_matters wide grid).
 
     ``layout="classifiers_rows"``: rows = classifiers, columns = tumor location
-    (transposed tall grid).
+    (transposed tall grid). Genomic rows use the same source-availability and
+    recorded-call filters as stacked bars. Each pie reports its own denominator.
     """
     configure_matplotlib()
 
     locations = [loc for loc in LOCATION_ORDER if loc in set(df["Location"])]
     locations += sorted(loc for loc in pd.unique(df["Location"]) if loc not in locations)
-    location_n = {loc: int((df["Location"] == loc).sum()) for loc in locations}
+    required_calls = tuple(c for c in molecular_cols if c in GENOMIC_CLASSIFIER_COLS)
+    cohorts = {col: stacked_bar_cohort(df, col, required_calls=required_calls) for col in molecular_cols}
 
     col_palettes: dict[str, dict[str, str]] = {}
     col_orders: dict[str, list[str]] = {}
     for col in molecular_cols:
-        palette, order = _palette_for_column(col, label_by_col[col], df[col])
+        palette, order = _palette_for_column(col, label_by_col[col], cohorts[col][col])
         col_palettes[col] = palette
         col_orders[col] = order
 
@@ -253,7 +256,8 @@ def plot_location_pie_patchwork(
             else:
                 location, col = row_item, col_item
             ax = axes[row_idx, col_idx]
-            loc_df = df[df["Location"] == location]
+            cohort = cohorts[col]
+            loc_df = cohort[cohort["Location"] == location]
             counts = loc_df[col].value_counts(dropna=False)
             predefined_order = col_orders.get(col, [])
             values_in_order = [v for v in predefined_order if v in counts.index]
@@ -285,7 +289,7 @@ def plot_location_pie_patchwork(
             if classifiers_rows:
                 if row_idx == 0:
                     ax.set_title(
-                        f"{location}\n(N={location_n[location]})",
+                        location,
                         fontsize=title_fontsize,
                     )
                 if col_idx == 0:
@@ -303,7 +307,7 @@ def plot_location_pie_patchwork(
                     ax.set_title(label_by_col[col], fontsize=title_fontsize)
                 if col_idx == 0:
                     ax.annotate(
-                        f"{location}\n(N={location_n[location]})",
+                        location,
                         xy=(-1.25, 0),
                         xycoords="data",
                         ha="right",
@@ -311,6 +315,10 @@ def plot_location_pie_patchwork(
                         fontsize=title_fontsize,
                         fontweight="bold",
                     )
+            ax.text(0.5, -0.06, f"N={int(total)}", transform=ax.transAxes,
+                    ha="center", va="top", fontsize=11)
+            if not total:
+                ax.text(0.5, 0.5, "No data", transform=ax.transAxes, ha="center", va="center")
             ax.set_axis_off()
 
     fig.tight_layout()
@@ -318,8 +326,7 @@ def plot_location_pie_patchwork(
     finalize_figure_labels(fig)
     fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if show:
-        finalize_figure_labels(plt.gcf())
-        plt.show()
+        show_figure_inline(fig)
     plt.close(fig)
 
     legend_path = None
@@ -332,7 +339,7 @@ def plot_location_pie_patchwork(
                 label,
                 col_palettes.get(col, {}),
                 col_orders.get(col, []),
-                df[col],
+                cohorts[col][col],
             )
             legend_sections.append((label, entries))
 
@@ -383,7 +390,7 @@ def plot_location_pie_patchwork(
 
 
 def stacked_bar_cohort(df: pd.DataFrame, col: str, *, required_calls=()) -> pd.DataFrame:
-    """Use the same embedded-genomic-data cohort for every genomic classifier.
+    """Select the shared genomic cohort for both pies and stacked bars.
 
     The existing genomic_tested flag is based on source alteration records,
     not independently verified sequencing success. Missing classifier calls
@@ -392,7 +399,7 @@ def stacked_bar_cohort(df: pd.DataFrame, col: str, *, required_calls=()) -> pd.D
     if col not in GENOMIC_CLASSIFIER_COLS:
         return df
     if "genomic_tested" not in df:
-        raise KeyError("Genomic bars require the genomic_tested availability flag")
+        raise KeyError("Genomic plots require the genomic_tested availability flag")
     flag = df["genomic_tested"]
     if not flag.dropna().isin([True, False]).all():
         raise ValueError("genomic_tested must contain Boolean availability flags")
@@ -562,7 +569,6 @@ def plot_location_stacked_bar_patchwork(
         finalize_figure_labels(fig)
         fig.savefig(out_png, dpi=300, bbox_inches="tight")
     if show:
-        finalize_figure_labels(plt.gcf())
-        plt.show()
+        show_figure_inline(fig)
     plt.close(fig)
     return out_svg

@@ -74,7 +74,7 @@
   ],
   "supplemental_benchmark_metrics": "identical to previous verified metrics; now derived from public AnnData",
   "tests": {
-    "unittest": 59,
+    "unittest": 60,
     "standalone": 7
   },
   "full_figure_execution": "All 12 manuscript notebooks passed in the clean environment; Table 1 rerun with final embedded clinical inputs.",
@@ -95,5 +95,20 @@
       "bytes": 65396590,
       "sha256": "ee668f4ca1af45f1363bcc06d01c92305d8048655fc95206f7397d94b077abe7"
     }
-  ]
+  ],
+  "figure1_final_check": {
+    "inline_images": {
+      "pies": 1,
+      "stacked_bars": 2,
+      "km": 3
+    },
+    "genomic_cases": 61,
+    "genomic_by_location": {
+      "PCNS": 19,
+      "bone": 18,
+      "nodal": 15,
+      "testis": 9
+    },
+    "checks": "Genomic pie/bar denominator regression and full Figure 1 execution passed."
+  }
 }
