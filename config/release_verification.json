@@ -62,10 +62,10 @@
   ],
   "supplemental_benchmark_metrics": "identical to previous verified metrics; now derived from public AnnData",
   "tests": {
-    "unittest": 64,
+    "unittest": 66,
     "standalone": 7
   },
-  "full_figure_execution": "All 12 manuscript notebooks passed after the native LymphPlex update; Figure 1 also rerun after reversing the LymphGen stack and legend.",
+  "full_figure_execution": "All 12 manuscript notebooks passed after the native LymphPlex update; Figure 1 also rerun after reversing the LymphGen stack and legend. Figures 4 and 6 subsequently rerun with a uniform >5-case association cutoff.",
   "classifier_notebook_execution": "All 4 audit/confidence notebooks passed in the clean environment.",
   "clinical_table_verification": "Combined Table 1 exactly matches the existing analysis, with pseudonymised correction fields embedded.",
   "publication": "Pending user Zenodo upload and fixed record ID.",
@@ -124,5 +124,18 @@
   },
   "fresh_call_comparison_status": "Native genomic audit rerun on final release asset: zero differences for all methods; transcriptomic inputs and assignments preserved.",
   "LymphPlex_method": "Unmodified author GetCluster/PAM with numeric NA; TP53 override; no imputation",
-  "LymphPlex_example_benchmark": "config/classification_audit/lymphplex_missingness_benchmark.json"
+  "LymphPlex_example_benchmark": "config/classification_audit/lymphplex_missingness_benchmark.json",
+  "association_subtype_filter": {
+    "rule": ">5 cases per subtype (minimum 6), uniform across classifiers",
+    "scope": "Discovery and validation global and pairwise associations; before pairwise complete-case selection",
+    "survival_and_enrichment_criteria": "Preserved",
+    "discovery_EcoTyper": {
+      "n_tested": 23,
+      "n_levels": 2,
+      "retained": [
+        "LE6",
+        "LE8"
+      ]
+    }
+  }
 }

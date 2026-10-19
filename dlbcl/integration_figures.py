@@ -1109,7 +1109,7 @@ def plot_combined_association_dumbbell(
 
     if arch_group:
         ax.text(
-            -0.22,
+            -0.40,
             float(np.mean(arch_y)),
             "Archetype higher",
             transform=ax.get_yaxis_transform(),
@@ -1122,7 +1122,7 @@ def plot_combined_association_dumbbell(
         )
     if loc_group:
         ax.text(
-            -0.22,
+            -0.40,
             float(np.mean(loc_y)),
             "Location higher",
             transform=ax.get_yaxis_transform(),
@@ -1489,12 +1489,8 @@ CRAMER_V_HIGHLIGHT_MIN = 0.15
 # Drop classifier levels with fewer than this many patients before global chi-square tests
 # (Fig 4B association bars / pairwise). Enrichment dotplots (Fig 4C/D) keep all levels
 # except explicit excludes — see ``compute_group_enrichment_table``.
-MIN_CLASSIFIER_LEVEL_N = 10
-
-# Sparse subtype pooling (Lymphgen has many low-count classes in n=61 discovery cohort).
-MIN_CLASSIFIER_LEVEL_N_BY_METRIC: dict[str, int] = {
-    "Wright 2020 Lymphgen": 5,
-}
+# Uniform global-association cutoff: >5 cases (at least six) for every classifier.
+MIN_CLASSIFIER_LEVEL_N = 6
 
 # Enrichment dotplots: keep rare levels (n≥1). Explicit METRIC_FEATURE_EXCLUDE / skip
 # labels (Other, unknown, …) are still masked.
@@ -1591,7 +1587,7 @@ def _prepare_classifier_series(
 ) -> pd.Series:
     """Mask excluded / missing classifier levels before crosstabs."""
     if min_level_n is None:
-        min_level_n = MIN_CLASSIFIER_LEVEL_N_BY_METRIC.get(metric_label, MIN_CLASSIFIER_LEVEL_N)
+        min_level_n = MIN_CLASSIFIER_LEVEL_N
     out = series.astype(str).str.strip()
     exclude = {x.lower() for x in METRIC_FEATURE_EXCLUDE.get(metric_label, ())}
     exclude |= _SKIP_FEATURE_VALUES
