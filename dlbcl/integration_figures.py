@@ -1927,10 +1927,11 @@ def plot_association_enrichment_dotplot_by_classifier(
             strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
             gc_cases = cohort["KotlovSig"].astype(str).str.strip().eq("GC-like") & cohort[strat_col].notna()
             if not gc_cases.any():
-                ax.text(
-                    0.5, feats.index("GC-like"), "No assigned cases",
-                    transform=ax.get_yaxis_transform(), ha="center", va="center",
-                    fontsize=8, color="0.45",
+                # Visual placeholders only: absent GC-like has no OR, p-value or FDR.
+                ax.scatter(
+                    [group_x[g] for g in groups], [feats.index("GC-like")] * len(groups),
+                    s=dummy_dot, color="0.82", edgecolors="0.65",
+                    linewidths=0.45, alpha=0.9, zorder=1,
                 )
 
         ax.set_yticks(range(len(feats)))

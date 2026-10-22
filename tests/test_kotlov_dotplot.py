@@ -10,7 +10,7 @@ from dlbcl.integration_figures import plot_association_enrichment_dotplot_by_cla
 
 
 class KotlovDotplotTests(unittest.TestCase):
-    def test_absent_gc_has_label_and_annotation_but_no_dots(self):
+    def test_absent_gc_has_grey_placeholders_without_annotation(self):
         frame = pd.DataFrame({
             'KotlovSig': ['Depleted', 'Inflammatory', 'Mesenchymal'] * 8,
             'Location': ['bone', 'nodal', 'PCNS', 'testis'] * 6,
@@ -25,7 +25,7 @@ class KotlovDotplotTests(unittest.TestCase):
                 ax=next(a for a in fig.axes if a.get_ylabel()=='Kotlov LME')
                 labels=[t.get_text() for t in ax.get_yticklabels()]
                 gc_row=labels.index('GC-like')
-                self.assertIn('No assigned cases', [t.get_text() for t in ax.texts])
-                for collection in ax.collections:
-                    self.assertFalse(any(y==gc_row for _,y in collection.get_offsets()))
+                self.assertNotIn('No assigned cases', [t.get_text() for t in ax.texts])
+                gc_dots = [(x, y) for collection in ax.collections for x,y in collection.get_offsets() if y==gc_row]
+                self.assertEqual(len(gc_dots), frame['Location' if stratifier=='location' else 'tumorimmune_archetype'].nunique())
                 plt.close(fig)

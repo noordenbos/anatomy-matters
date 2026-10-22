@@ -138,5 +138,5 @@
       ]
     }
   },
-  "kotlov_dotplot_gc_row": "GC-like retained as a display-only row with No assigned cases annotation when absent; no fabricated estimates or additional FDR tests."
+  "kotlov_dotplot_gc_row": "GC-like retained with small grey display-only placeholders when absent; no fabricated estimates or additional FDR tests."
 }
