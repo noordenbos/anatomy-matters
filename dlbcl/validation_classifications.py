@@ -300,13 +300,8 @@ def load_case_classification_validation(
 ) -> pd.DataFrame:
     """Read embedded ``case_classification_validation`` from the validation cohort."""
     del pred  # retained for notebook call compatibility
-    case_cc = validation_uns.get("case_classification_validation")
-    if not isinstance(case_cc, pd.DataFrame):
-        raise KeyError(
-            "case_classification_validation not found in adata.uns['validation_cohort']"
-        )
-    case_cc = case_cc.copy()
-    case_cc.index = case_cc.index.astype(str)
+    from .case_assignments import validation_assignments
+    case_cc = validation_assignments(validation_uns)
     if "genomic_tested" not in case_cc.columns:
         case_cc = add_validation_genomic_tested(case_cc, validation_uns)
     return case_cc

@@ -41,7 +41,7 @@ SUPPLEMENTARY_TABLES: dict[str, SupplementaryTableSpec] = {
     ),
     # --- Fig 3 discovery ---
     "3D_top_drivers": SupplementaryTableSpec(
-        "fig3D_top_class_drivers_ranked", "Fig 3D", "Top class-driving DE genes", "nb6",
+        "fig3D_top_class_drivers_ranked", "Fig 3D", "Differentially expressed genes", "nb6",
         role="input",
     ),
     "3D_heatmap_z": SupplementaryTableSpec(

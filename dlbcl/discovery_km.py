@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+from .plot_display import show_figure_inline
+
 from pathlib import Path
 from typing import Any
 
@@ -222,9 +225,12 @@ def plot_km_by_location(
 
     fig.subplots_adjust(bottom=KM_AT_RISK_BOTTOM)
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
-    plt.show(fig)
+    finalize_figure_labels(fig)
+    show_figure_inline(fig)
     plt.close(fig)
     if _REPO_ROOT is not None:
         log_wrote(out_path, _REPO_ROOT)
@@ -299,9 +305,12 @@ def plot_km_by_archetype(
 
     fig.subplots_adjust(bottom=KM_AT_RISK_BOTTOM)
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
-    plt.show(fig)
+    finalize_figure_labels(fig)
+    show_figure_inline(fig)
     plt.close(fig)
     if _REPO_ROOT is not None:
         log_wrote(out_path, _REPO_ROOT)

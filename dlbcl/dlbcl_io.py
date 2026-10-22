@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 import os
 import warnings
 from dataclasses import dataclass
@@ -153,15 +155,7 @@ def _patient_metadata_frame(uns: dict) -> pd.DataFrame:
                 cl = cl.set_index("patient_id")
             meta = meta.join(cl, how="left", rsuffix="_clinical")
         return meta.reset_index()
-    if "patient_metadata" in uns:
-        meta = pd.DataFrame(uns["patient_metadata"]).copy()
-        if meta.index.name == "patient_id":
-            meta = meta.reset_index()
-        return meta
-    raise KeyError(
-        "Expected adata.uns['case_classifications'] (and case_path/case_clinical) "
-        "or legacy adata.uns['patient_metadata']."
-    )
+    raise KeyError("Expected authoritative adata.uns['case_classifications']")
 
 
 def load_discovery_metadata(adata: ad.AnnData, patient_subset: list[str] | None = None) -> pd.DataFrame:
@@ -221,43 +215,14 @@ def normalize_archetype_frame(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def archetype_assignments_from_adata(adata: ad.AnnData) -> pd.DataFrame | None:
-    """Build archetype assignment table from embedded ``adata.uns`` (Zenodo fallback)."""
-    rows: list[dict[str, object]] | None = None
-    if "case_classifications" in adata.uns:
-        cc = normalize_archetype_frame(pd.DataFrame(adata.uns["case_classifications"]))
-        if "tumorimmune_archetype_id" in cc.columns:
-            if "patient_id" in cc.columns:
-                out = cc[["patient_id", "tumorimmune_archetype_id"]].copy()
-                out["patient_id"] = out["patient_id"].astype(str)
-            else:
-                out = cc[["tumorimmune_archetype_id"]].copy()
-                out.insert(0, "patient_id", cc.index.astype(str))
-            if "tumorimmune_archetype" in cc.columns:
-                out["tumorimmune_archetype"] = cc["tumorimmune_archetype"]
-            rows = out.dropna(subset=["tumorimmune_archetype_id"]).to_dict("records")
+def archetype_assignments_from_adata(adata: ad.AnnData) -> pd.DataFrame:
+    """Read precomputed discovery archetypes from the authoritative case table."""
+    from .case_assignments import discovery_assignments
 
-    if rows is None:
-        cluster_dict = adata.uns.get("tumorimmune_archetype_id")
-        if not isinstance(cluster_dict, dict):
-            cluster_dict = adata.uns.get("abundance_cluster_30")
-        if isinstance(cluster_dict, dict):
-            rows = [
-                {"patient_id": str(pid), "tumorimmune_archetype_id": int(clu)}
-                for pid, clu in cluster_dict.items()
-                if pd.notna(clu)
-            ]
-
-    if not rows:
-        return None
-    df = pd.DataFrame(rows)
-    df["patient_id"] = df["patient_id"].astype(str)
-    df["tumorimmune_archetype_id"] = pd.to_numeric(df["tumorimmune_archetype_id"], errors="coerce")
-    df = df.dropna(subset=["tumorimmune_archetype_id"])
-    df["tumorimmune_archetype_id"] = df["tumorimmune_archetype_id"].astype(int)
-    if "tumorimmune_archetype" not in df.columns:
-        df["tumorimmune_archetype"] = df["tumorimmune_archetype_id"].map(CLUSTER_NAME_MAP)
-    return df.reset_index(drop=True)
+    cc = discovery_assignments(adata)
+    out = cc[["tumorimmune_archetype_id", "tumorimmune_archetype"]].copy()
+    out.index.name = "patient_id"
+    return out.reset_index()
 
 
 def load_archetype_assignments(
@@ -266,63 +231,29 @@ def load_archetype_assignments(
     adata: ad.AnnData | None = None,
     required: bool = True,
 ) -> pd.DataFrame:
+    """Always read case_classifications; legacy dictionaries/CSVs are not sources."""
+    del required  # retained for call compatibility; the canonical table is required
     if adata is not None:
-        embedded = archetype_assignments_from_adata(adata)
-        if embedded is not None and not embedded.empty:
-            return embedded
-    # Public bundles embed archetypes in the h5ad; load them even when callers
-    # only pass ``paths`` (no separate CSV / maintainer notebook required).
-    if adata is None and paths.adata_path.exists():
-        try:
-            embedded_adata = sc.read_h5ad(paths.adata_path, backed="r")
-            embedded = archetype_assignments_from_adata(embedded_adata)
-            if embedded is not None and not embedded.empty:
-                return embedded
-        except Exception:
-            pass
-    if paths.arch_path.exists():
-        return normalize_archetype_frame(pd.read_csv(paths.arch_path))
-    legacy_csv = paths.processed_dir / "abundance_cluster_30_assignments.csv"
-    if legacy_csv.exists():
-        return normalize_archetype_frame(pd.read_csv(legacy_csv))
-    if required:
-        raise FileNotFoundError(
-            "Archetype assignments not found in adata.uns['case_classifications'] "
-            f"(columns tumorimmune_archetype_id / tumorimmune_archetype) "
-            f"and no fallback CSV at {rel_path(paths.arch_path, paths.repo_root)}.\n"
-            "Use the published DLBCL_location_2026.h5ad bundle, or pass adata= to "
-            "load_archetype_assignments() / call ensure_discovery_archetypes()."
-        )
-    return pd.DataFrame()
+        return archetype_assignments_from_adata(adata)
+    import h5py
+    from anndata.io import read_elem
+    from types import SimpleNamespace
+
+    with h5py.File(paths.adata_path, "r") as handle:
+        cc = read_elem(handle["uns/case_classifications"])
+    return archetype_assignments_from_adata(SimpleNamespace(uns={"case_classifications": cc}))
 
 
-def ensure_discovery_archetypes(
-    adata: ad.AnnData,
-    paths: NotebookPaths,
-) -> pd.DataFrame:
-    """Load archetypes from CSV or h5ad fallback and sync into ``adata.uns``."""
-    arch_df = load_archetype_assignments(paths, adata=adata, required=True)
-    inject_archetypes_into_adata(adata, arch_df)
-    return arch_df
+def ensure_discovery_archetypes(adata: ad.AnnData, paths: NotebookPaths) -> pd.DataFrame:
+    """Return the supplied assignments without creating another stored copy."""
+    return load_archetype_assignments(paths, adata=adata)
 
 
-def inject_archetypes_into_adata(
-    adata: ad.AnnData,
-    arch_df: pd.DataFrame,
-) -> ad.AnnData:
-    """Sync archetype assignments into ``adata.uns`` for downstream panels."""
-    cluster_dict = dict(zip(arch_df["patient_id"].astype(str), arch_df["tumorimmune_archetype_id"].astype(int)))
-    adata.uns["tumorimmune_archetype_id"] = cluster_dict
+def inject_archetypes_into_adata(adata: ad.AnnData, arch_df: pd.DataFrame) -> ad.AnnData:
+    """Explicitly update the canonical discovery table in memory."""
+    from .case_assignments import apply_archetype_assignments
 
-    cc = pd.DataFrame(adata.uns["case_classifications"]).copy()
-    if "patient_id" in cc.columns:
-        idx = cc["patient_id"].astype(str)
-    else:
-        idx = cc.index.astype(str)
-    cc["tumorimmune_archetype_id"] = idx.map(cluster_dict).values
-    if "tumorimmune_archetype" not in cc.columns or cc["tumorimmune_archetype"].isna().all():
-        cc["tumorimmune_archetype"] = cc["tumorimmune_archetype_id"].map(CLUSTER_NAME_MAP)
-    adata.uns["case_classifications"] = cc
+    apply_archetype_assignments(adata, arch_df, cohort="discovery")
     return adata
 
 
@@ -379,6 +310,7 @@ def save_figure_formats(
         kw = dict(bbox_inches=bbox_inches, **savefig_kw)
         if fmt == "png":
             kw.setdefault("dpi", dpi)
+        finalize_figure_labels(fig)
         fig.savefig(out, format=fmt, **kw)
         written.append(out)
     return written
@@ -723,11 +655,11 @@ def consolidate_case_classifications(
     out = pd.DataFrame(case_classifications).copy()
 
     for src, dst in UPDATE_COLUMN_ALIASES.items():
-        if src in out.columns:
+        if dst not in out.columns and src in out.columns:
             out[dst] = out[src]
 
     for src, dst in LYMPHOTYPER_TO_CANONICAL.items():
-        if src in out.columns:
+        if dst not in out.columns and src in out.columns:
             out[dst] = out[src]
 
     for src, dst in GENOMIC_LEGACY_FALLBACK.items():

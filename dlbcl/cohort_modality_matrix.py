@@ -6,6 +6,8 @@ validation genomics (or new modalities) can be enabled by editing one place.
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -539,7 +541,9 @@ def save_fig1c_v1(
     plt.subplots_adjust(left=0.28, right=0.98, top=0.78, bottom=0.08, wspace=0.08)
 
     out_base = fig_dir / "fig1C_cohort_modality_matrix"
+    finalize_figure_labels(fig)
     fig.savefig(f"{out_base}.svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(f"{out_base}.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
     return out_base.with_suffix(".svg"), out_base.with_suffix(".png")
@@ -664,7 +668,9 @@ def _save_fig1c_patient_strips(
     plt.subplots_adjust(left=0.22, right=0.98, top=0.82, bottom=0.08, wspace=0.22)
 
     out_base = fig_dir / stem
+    finalize_figure_labels(fig)
     fig.savefig(f"{out_base}.svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(f"{out_base}.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
     return out_base.with_suffix(".svg"), out_base.with_suffix(".png")

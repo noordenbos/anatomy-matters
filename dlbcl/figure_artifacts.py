@@ -43,7 +43,7 @@ FIGURE_ARTIFACTS: dict[str, FigureArtifactSpec] = {
   ),
   # Fig 3
   "3A_spatial_example": FigureArtifactSpec("fig3A_spatial_example", "Fig 3A", "Spatial archetype example", "nb7"),
-  "3D_de_heatmap": FigureArtifactSpec("fig3D_top_class_drivers_heatmap", "Fig 3D", "Top class-driver heatmap", "nb6"),
+  "3D_de_heatmap": FigureArtifactSpec("fig3D_top_class_drivers_heatmap", "Fig 3D", "Differentially expressed genes heatmap", "nb6"),
   "3E_L_module_scores": FigureArtifactSpec("fig3E-L_module_scores", "Fig 3E–L", "Immune / T-helper module scores", "fig3"),
   "3M_ecotyper": FigureArtifactSpec("fig3M_ecotyper_b_state_by_archetype", "Fig 3M", "EcoTyper B-cell states", "fig3"),
   "3O_gsea_hallmark": FigureArtifactSpec("fig3O_gsea_archetypes_hallmark", "Fig 3O", "Hallmark GSEA dotplot", "fig3"),
@@ -52,6 +52,7 @@ FIGURE_ARTIFACTS: dict[str, FigureArtifactSpec] = {
   "4B_association": FigureArtifactSpec("fig4B_association_dumbbell", "Fig 4B", "Association dumbbell", "nb12"),
   # Fig 5 validation
   "5A_val_km_archetype": FigureArtifactSpec("fig5A_val_km_os_archetype", "Fig 5A", "Validation KM OS archetype", "nb14"),
+  "5E_os_forest": FigureArtifactSpec("fig5E_archetype_os_cohort_forest", "Fig 5E", "Meta-analysis OS forest", "fig5"),
   "5F_val_loc_arch_heatmaps": FigureArtifactSpec("fig5F_val_location_archetype_heatmaps", "Fig 5F", "Location × archetype heatmaps", "fig5"),
   "5F_val_loc_arch_pies": FigureArtifactSpec("fig5F_val_location_archetype_pies", "Fig 5F", "Location × archetype pies", "fig5"),
   "5G_cox_forest": FigureArtifactSpec("fig5G_cox_location_archetype_forest_OS", "Fig 5G", "MV Cox forest OS", "fig5"),

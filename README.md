@@ -1,249 +1,117 @@
 # Anatomical Origin Defines Tumor–Immune Archetypes in Diffuse Large B-cell Lymphoma
 
-Code and notebooks to reproduce the figures in our manuscript (preprint; journal submission pending).
+Code, executed notebooks and versioned AnnData files for the manuscript. This checkout is the **v1.1.0 release candidate**. Its data checksums are frozen in `release.json`; the matching Zenodo record will be added when published. The older v1.0.0 data are not interchangeable with this version.
 
-Notebooks are committed **with inline outputs**, so you can browse results without re-running.
-We do invite reviewers/editors/public to rerun the notebooks as a fully reproducible pipeline, this process is simplified to 2 simple steps to lower participation threshold.
-There are twelve independent Jupyter notebooks (`fig1`–`fig6`, `table1`, `supplemental_fig1`–`supplemental_fig5`) which read the same single AnnData file (~600MB), that is automatically pulled from zenodo. 
+## Install and reproduce
 
----
-
-## Recommended setup (use the script)
-
-| Platform | Setup script |
-|----------|----------------|
-| macOS / Linux / [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) | `./setup_dev.sh` |
-| Windows PowerShell | `.\setup_dev.ps1` |
-
-### 1. Get the code
+Use Python **3.12 or later**. The recorded execution environment is in `config/environment.json`; Python dependencies are pinned in `requirements.txt`. Native classifier audits have additional requirements below.
 
 ```bash
 git clone https://github.com/noordenbos/anatomy-matters.git
 cd anatomy-matters
-```
-
-No Git? See [First time with Python / Git](#first-time-with-python--git) (ZIP download workaround).
-
-### 2. Run the setup script
-
-**macOS / Linux / WSL**
-
-```bash
-chmod +x setup_dev.sh
-./setup_dev.sh
-```
-
-**Windows PowerShell**
-
-```powershell
-# If blocked once: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\setup_dev.ps1
-```
-
-This downloads **only** the AnnData (~600 MB) from Zenodo into `data/DLBCL_location_2026.h5ad` (concept DOI [10.5281/zenodo.20592859](https://doi.org/10.5281/zenodo.20592859), which always resolves to the latest version; current version: [21843878](https://zenodo.org/records/21843878)). It does **not** download the raw IMC archive (`IMC.7z`).
-
-To use a local AnnData instead: `./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad` (or `.\setup_dev.ps1 -Adata ...`).
-
-Optional: execute every figure notebook after setup (most notebooks finish in under ~5 minutes; full suite often ~10–20 minutes):
-
-```bash
-./setup_dev.sh --execute-figures
-```
-
-```powershell
-.\setup_dev.ps1 -ExecuteFigures
-```
-
-The script creates `.venv`, installs `requirements.txt`, places `data/DLBCL_location_2026.h5ad`, then offers a short menu (Jupyter / re-run all / exit) and prints the commands to use next time.
-
-Everything the setup creates stays inside this folder (virtualenv, AnnData link or copy, regenerated figures). Delete the folder to remove the local install completely — nothing is written to system Python, global Jupyter, or other paths outside the checkout. If you pointed `-Adata` / `--adata` at a file elsewhere, that original file is left untouched.
-
-### 3. Later sessions
-
-First activate the environment, then choose Jupyter or a full re-run:
-
-```bash
+# Use the v1.1.0 release checkout/archive when available.
+./setup_dev.sh --data-dir /path/to/release-data
 source .venv/bin/activate
-cd notebooks && jupyter notebook          # (1) interactive
-# or from repo root:
-PYTHONPATH=. python tools/run_all_notebooks.py   # (2) recreate figures + tables
+PYTHONPATH=. python tools/run_all_notebooks.py
 ```
 
+Windows PowerShell:
+
 ```powershell
+.\setup_dev.ps1 -DataDir C:\path\to\release-data
 .\.venv\Scripts\Activate.ps1
-cd notebooks; jupyter notebook
-# or from repo root:
-$env:PYTHONPATH = "$PWD"; python tools/run_all_notebooks.py
+$env:PYTHONPATH = "$PWD"
+python tools/run_all_notebooks.py
 ```
 
-`supplemental_fig1` (oncoprint) needs R — see [Fig S1A (R)](#fig-s1a-r-oncoprint-only). It is skipped automatically if `Rscript` is missing.
+The release-data directory contains both files listed below. Once this candidate is published, omit `--data-dir` / `-DataDir` to download them from the fixed Zenodo record in `release.json`. Setup checks SHA-256 and size, leaves an existing mismatched file untouched, and never substitutes the latest or an older release. It downloads no raw IMC archive. To verify installed files: `python tools/fetch_release_data.py --check`.
 
----
+For interactive work, run `cd notebooks && jupyter notebook` after activating the environment. `--execute-figures` (PowerShell `-ExecuteFigures`) runs the manuscript notebooks during setup. Figure 2 can take substantially longer than the other notebooks. The runner executes one notebook per process and saves inline outputs. Resume with `python tools/run_all_notebooks.py --only fig2 fig3`.
 
-## First time with Python / Git?
+## Paired data files
 
-You only need a terminal, **Python 3.10+**, and either **Git** or a ZIP download.
+| Release asset | Installed path | Contents |
+|---|---|---|
+| `DLBCL_location_2026.publish.h5ad` | `data/DLBCL_location_2026.h5ad` | Study cell measurements, clinical/expression/genomic data, spatial information, canonical classifier calls, and selected genomic classifier inputs |
+| `panel_call_confidence.public.h5ad` | `data/public/panel_call_confidence.public.h5ad` | External benchmark results, feature inventories, and the public source matrices included for those analyses |
 
-| Tool | macOS | Windows |
-|------|--------|---------|
-| Terminal | Terminal.app | PowerShell, or [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) |
-| Python | [python.org](https://www.python.org/downloads/) or `brew install python` | [python.org](https://www.python.org/downloads/) (tick **Add python.exe to PATH**) or WSL: `sudo apt install python3 python3-venv` |
-| Git | `xcode-select --install` or [git-scm.com](https://git-scm.com/) | [git-scm.com](https://git-scm.com/) or WSL: `sudo apt install git` |
-| Setup | `./setup_dev.sh` | `.\setup_dev.ps1` (or `./setup_dev.sh` inside WSL) |
+The study bundle contains **64 discovery cases and 303 validation cases**. Genomic source inputs support 61 discovery and 221 validation cases. T29, T41 and T48 have `unknown` genomic calls because their source inputs are unavailable. Other missing calls are distinct from classifier residual categories (`Other`, `Others`, `Unclassified`) and from missing-feature abstention (`Unassigned`).
 
-Check:
+The two authoritative assignment tables are:
 
-```bash
-python3 --version    # should be 3.10 or newer
-git --version        # optional if you use the ZIP workaround below
-```
+- `uns["case_classifications"]` — discovery.
+- `uns["validation_cohort"]["case_classification_validation"]` — validation.
 
-### ZIP download (no Git)
+LymphPlex coverage and completion sensitivity are recorded separately in `uns["lymphplex_call_audit"]` and `uns["validation_cohort"]["lymphplex_call_audit"]`. The canonical `LymphPlex` columns contain native subtype labels; the sensitivity flag does not act as an abstention rule.
 
-1. Open the GitHub repo.
-2. **Code → Download ZIP**.
-3. Unzip, then in a terminal:
+Clinical metadata and model scores are separate. Figure helpers read assignments from these tables. Figure 2 and Figure 5 can recalculate archetypes for transparency; `APPLY_RECOMPUTED_ASSIGNMENTS` defaults to false, and opting in affects only that notebook's in-memory data. It does not rewrite the released file.
 
-**macOS / Linux / WSL**
+External cohorts have individual source/access records. If an unavailable source matrix is requested, the confidence notebooks raise an error identifying the source publication and access route. Archived benchmark metrics are not represented as rerun native model inference. The external-reference bundle does not contain this study's discovery or validation cohorts.
 
-```bash
-cd /path/to/anatomy-matters-main   # folder name may include -main
-chmod +x setup_dev.sh
-./setup_dev.sh --adata /path/to/DLBCL_location_2026.h5ad
-```
+## Notebooks
 
-**Windows PowerShell**
+| Notebook | Output |
+|---|---|
+| `fig1.ipynb` | Classifier composition and location survival |
+| `fig2.ipynb` | Cell landscape, spatial archetypes and archetype survival |
+| `fig3.ipynb` | Spatial segmentation, expression programs and HLA |
+| `fig4.ipynb` | Discovery integration and associations |
+| `fig5.ipynb` | Expression classifier, validation survival and Cox analyses |
+| `fig6.ipynb` | Validation integration |
+| `table1.ipynb` | Discovery and validation clinical characteristics |
+| `supplemental_fig1.ipynb` | Genomic oncoprint and paired classifier summaries |
+| `supplemental_fig2.ipynb` | Modality, QC, cell compartments and protein heatmaps |
+| `supplemental_fig3.ipynb` | Gene–protein comparisons, PCA, HLA and classifier landscapes |
+| `supplemental_fig4.ipynb` | Supplementary Cox analyses |
+| `supplemental_fig5.ipynb` | Validation survival, EcoTyper, module scores and GSEA |
+| `genomic_panel_call_confidence.ipynb` | Genomic panel feature coverage and external call retention |
+| `transcriptomic_panel_call_confidence.ipynb` | Expression panel feature coverage and external call retention |
+| `genomic_classification_audit.ipynb` | Fresh genomic classifier inference and comparison with supplied study calls |
+| `transcriptomic_classification_audit.ipynb` | Explicit preprocessing, fresh GEP inference and comparison with supplied study calls |
 
-```powershell
-cd C:\path\to\anatomy-matters-main
-.\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad
-```
+The default batch runner handles the twelve manuscript notebooks. The four classifier notebooks are run explicitly, because native inference has additional dependencies. Each confidence notebook has separate coverage and performance cells for each classifier. Declared feature coverage can run without expression datasets, using `data/public/panel_feature_requirements.json`.
 
-ZIP checkouts are fine for reproduction; you just will not receive `git pull` updates unless you switch to a clone later.
+Figure files are written to `figures/`; figure source tables to `data/supplementary/`; audit outputs to `outputs/classification_audit/`. These generated directories are not committed.
 
-### Common snags
+## Classifier audit resources and write behavior
 
-- **`python3` / `python` not found** — install Python 3.10+, reopen the terminal; on Windows tick **Add python.exe to PATH**.
-- **`permission denied: ./setup_dev.sh`** — run `chmod +x setup_dev.sh`.
-- **PowerShell: running scripts is disabled** — `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
-- **Symlink fails on Windows** — enable Developer Mode, or let `setup_dev.ps1` fall back to copying the h5ad.
-- **AnnData missing** — until Zenodo is online pass `--adata` / `-Adata` with the full path to `DLBCL_location_2026.h5ad`.
-- **Windows: `Assertion failed: error not defined ... libzmq ... ip.cpp` while batch-running notebooks** — usually memory pressure when starting the next kernel (fig2 is the heaviest early notebook). Close other apps, aim for ~16 GB RAM free, `git pull` for the latest runner (isolates each notebook in a subprocess), then resume with e.g. `$env:PYTHONPATH = "$PWD"; python tools/run_all_notebooks.py --only fig2 fig3 fig4 fig5 fig6 supplemental_fig2 supplemental_fig3 supplemental_fig4 supplemental_fig5`.
+See [classification resources](docs/classification-resources.md) for upstream software, models, packages and reference fingerprints. Audit notebooks use portable defaults in `config/classification_audit/default.json`. Optional machine-specific paths belong in the ignored `config/classification_audit/local.json`. Missing native resources cause an explicit error; saved study calls are never substituted for an inference run.
 
----
+**Audits default to review-only (`promote: false`).** They export inputs, scores, provenance, fresh calls and before/after comparisons. Explicitly enabling promotion creates a backup, verifies the source hash, updates the canonical calls and companion score/state summaries atomically, and verifies unrelated data are unchanged. Run promotion sequentially and on a working copy. A modified AnnData intentionally no longer matches the release checksum.
 
-## Figure notebooks
+Genomic preparation starts with selected events, panel assignments and FISH measurements in `uns["classification_inputs"]`. It does not rerun variant calling or upstream pathogenicity/AF selection. Four discovery cases use BLYMF200 and 57 use BLYMFv2; the 221 validation assignments to BLYMFv2 remain **provisional**. Panel membership is not equivalent to sample-specific callable-base coverage. There are no measured regional CN inputs. DLBclass imputes unmeasured inputs using encoded reference means; LymphGen A53 is not evaluated.
 
-| Notebook | Manuscript | Contents (summary) |
-|----------|------------|-------------------|
-| `fig1.ipynb` | Fig 1 | Classifier composition pies, location KM |
-| `fig2.ipynb` | Fig 2 | tSNE landscape, archetype heatmap/pies, archetype KM |
-| `fig3.ipynb` | Fig 3 | Spatial segmentation, transcriptome programs, HLA |
-| `fig4.ipynb` | Fig 4 | Discovery integration (circos, associations, enrichment) |
-| `fig5.ipynb` | Fig 5 | Elastic-net classifier, validation survival/Cox |
-| `fig6.ipynb` | Fig 6 | Validation integration |
-| `table1.ipynb` | Table 1 | Clinical characteristics (discovery + validation) |
-| `supplemental_fig1.ipynb` | Fig S1 | Genomic oncoprint (needs R) |
-| `supplemental_fig2.ipynb` | Fig S2 | Modality matrix, QC tSNE, compartment tSNEs, protein heatmaps |
-| `supplemental_fig3.ipynb` | Fig S3 | Gene–protein validation, PCA, HLA panels, classifier tSNEs |
-| `supplemental_fig4.ipynb` | Fig S4 | Discovery/validation Cox supplements |
-| `supplemental_fig5.ipynb` | Fig S5 | Validation location KM, EcoTyper, module scores, GSEA |
+| Method | Implementation and qualification |
+|---|---|
+| LymphGen / DLBclass | Native reference model / author ensemble, with explicit panel masks and method-specific missingness |
+| HMRN | Reproduced author reference fit; observed-feature Bernoulli marginalization is a research extension |
+| LymphPlex | Native author function with numeric NA and PAM available-feature distances; coverage and completion sensitivity retained separately; incomplete-panel accuracy not separately author-validated |
+| LymphoMAP / EcoTyper | Native author software with the declared input scale and cohort handling |
+| Kotlov / Ciavarella | Explicit cohort-dependent clustering reconstructions; Kotlov subtype naming uses external reference centroids |
+| Lymph2Cx | Full 15-predictor plus five-housekeeping-gene research reconstruction with externally frozen NanoString thresholds; not the proprietary clinical assay |
 
-Cross-figure panels that share computation are markdown pointers (for example Fig S3J → `fig5.ipynb`).
+Validation NanoString normalization is replayed from raw probes and checked against the stored matrix. Discovery starts from the stored normalized log2 matrix; its raw-control preprocessing has not been independently replayed. Do not apply the NanoString Lymph2Cx thresholds automatically to TPM or microarrays.
 
-```
-notebooks/          # One notebook per manuscript figure
-dlbcl/              # Shared helpers imported by the notebooks
-tools/              # Batch runner (run_all_notebooks.py)
-setup_dev.sh        # Setup (macOS / Linux / WSL)
-setup_dev.ps1       # Setup (Windows PowerShell)
+## Figure labels and colors
 
-requirements.txt    # Python dependencies
-data/               # DLBCL_location_2026.h5ad (not committed)
-figures/            # SVG/PNG outputs (created when you run notebooks)
-```
+`config/classifier_colors.json` stores named palettes, source provenance, aliases and explicit local fallbacks. Plotting helpers use `dlbcl/classifier_colors.py`. Current HMRN calls use biological names; historical C1–C6 display aliases are not reference-mixture component numbers. Unknown palette labels raise an error.
 
----
+`dlbcl/display_labels.py` centralizes manuscript display names, including the diverse-immune archetype. LymphGen composites are striped in the oncoprint; composition pies retain the documented flat-color fallback. Restart the kernel and rerun affected figures after changing palette configuration.
 
-## Data access
+## R oncoprint
 
-Single file: **`data/DLBCL_location_2026.h5ad`**. It contains single-cell protein data, patient-level expression/metadata, spatial masks, OMIQ tSNE coordinates, genomic profiling tables, and the embedded validation cohort (`uns['validation_cohort']`, aliases `V1`…).
+Supplemental Figure 1 requires R ≥4.2 with `svglite` and Bioconductor `ComplexHeatmap`. The batch runner skips this notebook if Rscript is unavailable; a skipped notebook is not a fully reproduced figure suite. The classifier audits have additional R packages listed in the resource guide.
 
-Tumor–immune archetype labels (`tumorimmune_archetype` / `tumorimmune_archetype_id`) and genomic classifier columns live in `adata.uns` — no separate CSV files are required. Override the data root with `DLBCL_DATA_DIR` if needed.
+## Verification and release record
 
-When notebooks are re-run, plot source tables export to `data/supplementary/{fig_id}/` (gitignored).
+`tools/check_release.py` verifies manifests, configuration, notebook execution and public-path hygiene. `tools/publish_notebooks.py` sanitizes saved textual outputs without discarding plots; run its `--check` mode afterward. Tests can be run with `python tools/run_tests.py`.
 
-_Patient-level restricted data are not hosted in this repository._
+Release changes are described in [CHANGELOG.md](CHANGELOG.md). The frozen data hashes, model/resource fingerprints and recorded environment identify the inputs used for this version. The original working dataset and maintainer-local configuration are not included in the code archive.
 
----
+## Citation and license
 
-## Fig S1A (R oncoprint only)
+Noordenbos et al. *Anatomical Origin Defines Tumor–Immune Archetypes in Diffuse Large B-Cell Lymphoma*. [Preprint](https://doi.org/10.2139/ssrn.7279068).
 
-Install [R](https://cran.r-project.org/) (≥ 4.2), then:
+Repository code: [LICENSE](LICENSE). External software and reference data retain their original terms and citations; the repository license does not relicense third-party resources.
 
-```r
-install.packages("svglite")
-if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
-BiocManager::install("ComplexHeatmap")
-```
-
-Confirm `Rscript` is on your `PATH` (`which Rscript`).
-
----
-
-## Manual setup reference
-
-Prefer [`./setup_dev.sh`](#recommended-setup-use-the-script) or [`.\setup_dev.ps1`](#recommended-setup-use-the-script). These steps are equivalent if you set things up by hand.
-
-<details>
-<summary>macOS / Linux (click to expand)</summary>
-
-```bash
-git clone https://github.com/noordenbos/anatomy-matters.git
-cd anatomy-matters
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-mkdir -p data
-# AnnData only (~600 MB); do not download IMC.7z from the same Zenodo record.
-# Concept record 20592859 always redirects to the latest version.
-RECORD_ID=$(curl -fsSL -o /dev/null -w '%{url_effective}' \
-  https://zenodo.org/api/records/20592859 | sed 's|.*/||')
-curl -fL -o data/DLBCL_location_2026.h5ad \
-  "https://zenodo.org/records/${RECORD_ID}/files/DLBCL_location_2026.publish.h5ad?download=1"
-```
-
-</details>
-
-<details>
-<summary>Windows PowerShell (click to expand)</summary>
-
-Prefer `.\setup_dev.ps1 -Adata C:\path\to\DLBCL_location_2026.h5ad`. Manual equivalent:
-
-```powershell
-git clone https://github.com/noordenbos/anatomy-matters.git
-cd anatomy-matters
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-New-Item -ItemType Directory -Force -Path data | Out-Null
-# Symlink (may require Developer Mode); otherwise Copy-Item the h5ad into data\
-New-Item -ItemType SymbolicLink -Path "data\DLBCL_location_2026.h5ad" `
-  -Target "C:\path\to\DLBCL_location_2026.h5ad"
-```
-
-If script activation is blocked: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then activate again.
-
-</details>
-
----
-
-## Citation
-
-Noordenbos, Troy and de Groot, Fleur and de Groen, Ruben and PDF, See, Anatomical Origin Defines Tumor–Immune Archetypes in Diffuse Large B-Cell Lymphoma. Available at SSRN: https://ssrn.com/abstract=7279068 or http://dx.doi.org/10.2139/ssrn.7279068
-
-## License
-
-See [LICENSE](LICENSE).
+Discovery clinical staging and prognostic corrections used by Table 1 are supplied as `uns["discovery_clinical_elements"]`, using only pseudonymised T identifiers and the relevant clinical fields. No local clinical sidecar is required.

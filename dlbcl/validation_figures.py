@@ -13,6 +13,10 @@ archetypes (nb5 elastic net), and OS only. Panels needing data the cohort lacks
 
 from __future__ import annotations
 
+from .display_labels import ARCHETYPE_SHORT_LABELS, finalize_figure_labels
+
+from .classifier_colors import reference_palette
+
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +28,7 @@ import pandas as pd
 ARCHETYPE_NAME_MAP = {1: "low immune", 2: "cytotoxic predominant", 3: "complex immune"}
 ARCHETYPE_ORDER = [1, 2, 3]
 CLUSTER_ORDER = ["low immune", "cytotoxic predominant", "complex immune"]
-SHORT_LABELS = {"low immune": "LI", "cytotoxic predominant": "CP", "complex immune": "CI"}
+SHORT_LABELS = dict(ARCHETYPE_SHORT_LABELS)
 
 # nb11 KM colours
 LOCATION_ORDER = ["PCNS", "nodal", "bone", "testis"]
@@ -184,10 +188,13 @@ def plot_km_by_location(
 
     fig.subplots_adjust(bottom=KM_AT_RISK_BOTTOM)
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
 
     summary = pd.DataFrame(rows)
@@ -238,10 +245,13 @@ def plot_km_by_archetype(df, *, title, ylabel, out_path, horizon=KM_HORIZON_YEAR
 
     fig.subplots_adjust(bottom=KM_AT_RISK_BOTTOM)
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
 
     summary = pd.DataFrame(rows)
@@ -402,10 +412,13 @@ def plot_top_driver_heatmap(X, y, cluster_order, class_drivers, *, out_path, top
     cbar.set_label("Gene z-score across classes")
     fig.tight_layout()
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
     return fig, zmat
 
@@ -593,10 +606,13 @@ def plot_module_scores(
     fig.suptitle(suptitle, fontsize=15, y=1.01)
     fig.tight_layout()
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
 
 
@@ -729,10 +745,13 @@ def plot_gsea_dotplot(gsea_long, cluster_order, *, out_path, genesets="MSigDB_Ha
     ax.legend(handles, labels, title="Significance", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=False)
 
     out_path = Path(out_path)
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_path.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
     return nes_sel, fdr_sel
 
@@ -756,27 +775,14 @@ def build_integration_metadata_validation(
                 meta[new_col] = meta[old_col]
         return meta[meta["Location"].notna()].copy()
 
-    meta = pd.DataFrame(index=pred.index.astype(str))
-    meta.index.name = "patient_id"
-    meta["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
-    meta["tumorimmune_archetype_id"] = pd.to_numeric(pred["pred_tumorimmune_archetype_id"], errors="coerce").astype("Int64")
-    meta["tumorimmune_archetype"] = meta["tumorimmune_archetype_id"].map(ARCHETYPE_NAME_MAP)
-    coo_map = {"GCB": "GCB", "Non-GCB": "ABC"}
-    meta["COO_NanoString"] = pred["coo_hans"].map(coo_map)
-    return meta[meta["Location"].notna()].copy()
+    raise ValueError("Pass the authoritative validation case_classification_validation table")
 
 
 # --------------------------------------------------------------------------- #
 # Fig 3M — EcoTyper B-cell states by archetype (nb6 aesthetics)
 # --------------------------------------------------------------------------- #
 ECOTYPER_BSTATE_ORDER = ["S01", "S02", "S03", "S04", "S05"]
-ECOTYPER_BSTATE_COLORS = {
-    "S01": "#f4a21d",
-    "S02": "#ffd84d",
-    "S03": "#7ac943",
-    "S04": "#3fa9f5",
-    "S05": "#2f4aa8",
-}
+ECOTYPER_BSTATE_COLORS = reference_palette("ecotyper_b_cell_states")
 ECOTYPER_BSTATE_LABELS = {
     "S01": "S1",
     "S02": "S2",
@@ -861,9 +867,11 @@ def plot_ecotyper_bcell_by_archetype(
     ax.legend(handles=legend_handles, title="EcoTyper B state", frameon=False, bbox_to_anchor=(1.02, 1), loc="upper left")
     fig.tight_layout()
     for ext in (".svg", ".png", ".pdf"):
+        finalize_figure_labels(fig)
         fig.savefig(out_dir / f"{out_stem}{ext}", bbox_inches="tight", dpi=300 if ext == ".png" else None)
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
 
     count_tab.to_csv(out_dir / f"{out_stem}_counts.csv")

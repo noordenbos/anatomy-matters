@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -479,11 +481,14 @@ def default_discovery_elements_path(repo_root: Path | str) -> Path:
     return candidates[0]
 
 
-def load_discovery_clinical_elements(path: Path | str | None) -> pd.DataFrame:
+def load_discovery_clinical_elements(path: Path | str | pd.DataFrame | None) -> pd.DataFrame:
     """Load per-patient IPI/IELSG components keyed by ``patient_id`` (``IMC_ID``)."""
-    if path is None or not Path(path).exists():
+    if isinstance(path, pd.DataFrame):
+        df = path.copy().dropna(how="all")
+    elif path is None or not Path(path).exists():
         return pd.DataFrame()
-    df = pd.read_csv(path).dropna(how="all")
+    else:
+        df = pd.read_csv(path).dropna(how="all")
     id_col = next((c for c in ("IMC_ID", "patient_id") if c in df.columns), None)
     if id_col is None:
         return pd.DataFrame()
@@ -1026,6 +1031,8 @@ def _cell_display(
     text = "" if value is None or (isinstance(value, float) and pd.isna(value)) else str(value)
     if text.lower() == "nan":
         text = ""
+    if column is None and row_label in COO_CATEGORY_ROWS and text.strip() == "Intermediate":
+        text = text.replace("Intermediate", "Unclassified")
     marks = markers.get((row_label, column), [])
     if not marks:
         return text
@@ -1332,6 +1339,7 @@ def render_clinical_table_svg(
                 _draw_text(origin_x, y, cur, fontsize=max(font_size - 0.5, 5.5))
                 y -= footnote_line_h / 2
 
+    finalize_figure_labels(fig)
     fig.savefig(out_path, format="svg", facecolor="white")
     plt.close(fig)
     return out_path
@@ -1547,7 +1555,11 @@ def load_case_clinical_frame(adata: object) -> pd.DataFrame:
         if df.columns[0] != "patient_id":
             df = df.rename(columns={df.columns[0]: "patient_id"})
     df["patient_id"] = df["patient_id"].astype(str)
-    return df.set_index("patient_id")
+    df = df.set_index("patient_id")
+    from .case_assignments import discovery_assignments
+    cc = discovery_assignments(adata)
+    df["COO_NanoString"] = cc["COO_NanoString"].reindex(df.index)
+    return df
 
 
 def prepare_discovery_clinical_frame(
@@ -1558,6 +1570,8 @@ def prepare_discovery_clinical_frame(
 ) -> pd.DataFrame:
     """Map discovery ``case_clinical`` onto the validation clinical-table schema."""
     raw = load_case_clinical_frame(adata).reset_index()
+    if elements_csv is None:
+        elements_csv = getattr(adata, "uns", {}).get("discovery_clinical_elements")
     if elements_csv is None and repo_root is not None:
         elements_csv = default_discovery_elements_path(repo_root)
 
@@ -1709,6 +1723,8 @@ def export_patient_clinical_metadata_xlsx(
     path.parent.mkdir(parents=True, exist_ok=True)
 
     discovery = load_case_clinical_frame(adata).reset_index()
+    if elements_csv is None:
+        elements_csv = getattr(adata, "uns", {}).get("discovery_clinical_elements")
     if elements_csv is None and repo_root is not None:
         elements_csv = default_discovery_elements_path(repo_root)
     if "ipi_mskcc" not in discovery.columns and "ipi_ielsg" not in discovery.columns:
@@ -2539,6 +2555,8 @@ def run_combined_clinical_table(
     root = Path(repo_root) if repo_root is not None else None
     if root is None and config.adata_path is not None:
         root = Path(config.adata_path).resolve().parent.parent
+    if discovery_elements_csv is None and adata is not None:
+        discovery_elements_csv = getattr(adata, "uns", {}).get("discovery_clinical_elements")
     if discovery_elements_csv is None and root is not None:
         discovery_elements_csv = default_discovery_elements_path(root)
 

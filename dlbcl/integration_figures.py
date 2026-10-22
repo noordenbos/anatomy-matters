@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from .display_labels import classifier_display_label, finalize_figure_labels
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2_contingency, fisher_exact
+
+from .classifier_colors import (
+    classifier_bindings, classifier_color, classifier_key, classifier_palette, is_missing_label,
+)
 
 ARCHETYPE_NAME_MAP = {
     1: "low immune",
@@ -72,83 +78,7 @@ DONUT_COLOR_PALETTES = {
         "NA": "whitesmoke",
     },
     HLA_CLASS_STATE_LABEL: HLA_CLASS_STATE_COLORS,
-    "Li 2025\nLymphoMAP": {
-        "FMAC": "#984ea3",
-        "LN": "#ff7f00",
-        "TEX": "#ffff33",
-        "NA": "whitesmoke",
-    },
-    "Kotlov 2021\nLME": {
-        "Depleted": "mediumpurple",
-        "GC-like": "darkorange",
-        "Inflammatory": "crimson",
-        "Mesenchymal": "darkgoldenrod",
-        "NA": "whitesmoke",
-    },
-    "Ciavarella 2018\nCluster": {
-        "Hot": "coral",
-        "Intermediate": "orchid",
-        "Cold": "darkorchid",
-        "NA": "whitesmoke",
-    },
-    "Steen 2021\nLymphoma_Ecotype": {
-        "LE1": "#a6cee3",
-        "LE2": "#e78ac3",
-        "LE3": "#a6d854",
-        "LE4": "#ffd92f",
-        "LE5": "#b2df8a",
-        "LE6": "#fb8072",
-        "LE7": "#80b1d3",
-        "LE8": "#e5c494",
-        "LE9": "#fccde5",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Alizadeh 2000\nCell of Origin": {
-        "GCB": "gold",
-        "ABC": "darkviolet",
-        "Intermediate": "pink",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Wright 2020\nLymphgen": {
-        "MCD": "blueviolet",
-        "BN2": "#80b1d3",
-        "EZB": "darkgoldenrod",
-        "Other": "lightgray",
-        "ST2": "#fdb462",
-        "BN2/MCD": "purple",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Chapuy 2025\nDLBclass": {
-        "C1": "darkgoldenrod",
-        "C3": "orange",
-        "C4": "#d62728",
-        "C5": "indigo",
-        "0": "lightgray",
-        "NA": "whitesmoke",
-    },
-    "Lacy 2020\nHMRN": {
-        "C1": "darkgoldenrod",
-        "C2": "#1b9e77",
-        "C3": "orange",
-        "C4": "#d62728",
-        "C5": "indigo",
-        "C6": "#7570b3",
-        "NA": "whitesmoke",
-    },
-    "Shen 2023\nLymphPlex": {
-        "MCD": "blueviolet",
-        "BN2": "#80b1d3",
-        "EZB": "darkgoldenrod",
-        "ST2": "#fdb462",
-        "N1": "#b3de69",
-        "TP53": "#d62728",
-        "Others": "lightgray",
-        "Other": "lightgray",
-        "NA": "whitesmoke",
-    },
+    **{name: classifier_palette(name) for name in classifier_bindings()},
 }
 
 
@@ -170,9 +100,11 @@ def _save_show_close(fig, out_svg: Path | None = None, *, show: bool = True) -> 
         out_svg.parent.mkdir(parents=True, exist_ok=True)
         # Keep text as font elements (not path outlines) for Illustrator/Inkscape editability.
         with plt.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42, "ps.fonttype": 42}):
+            finalize_figure_labels(fig)
             fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
 
 
@@ -260,7 +192,7 @@ def build_integration_metadata(
     meta["tumorimmune_archetype"] = meta["tumorimmune_archetype_id"].map(ARCHETYPE_NAME_MAP)
 
     for old_col, new_col in COLUMN_ALIASES.items():
-        if old_col in meta.columns:
+        if old_col in meta.columns and new_col not in meta.columns:
             meta[new_col] = meta[old_col]
 
     from .validation_classifications import finalize_lymphoma_ecotype_columns
@@ -393,6 +325,8 @@ def order_patients_hierarchical(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _donut_color(col: str, val) -> str:
+    if classifier_key(col) is not None:
+        return classifier_color(col, val)
     palette = DONUT_COLOR_PALETTES.get(col, {})
     return palette.get(str(val), palette.get("NA", "#cccccc"))
 
@@ -637,9 +571,10 @@ def plot_donut_circos(
         y = 0.95
         for col in legend_cols:
             palette = DONUT_COLOR_PALETTES.get(col, {})
-            legend_ax.text(0.01, y, col, fontsize=12, fontweight="bold", va="top")
+            legend_ax.text(0.01, y, col.replace("\n", " "), fontsize=12, fontweight="bold", va="top")
             y -= 0.04
-            entries = [(k, v) for k, v in palette.items() if k != "NA"]
+            observed = {str(v).strip() for v in work[col].dropna().unique()}
+            entries = [(k, v) for k, v in palette.items() if k in observed and not is_missing_label(k)]
             if col == "Tumor Immune Archetype\n(this work)":
                 order = ["cytotoxic predominant", "low immune", "complex immune"]
                 rank = {name: i for i, name in enumerate(order)}
@@ -651,7 +586,7 @@ def plot_donut_circos(
                 legend_ax.add_patch(
                     plt.Rectangle((0.03, y - 0.015), 0.025, 0.025, color=v, transform=legend_ax.transAxes, clip_on=False)
                 )
-                legend_ax.text(0.06, y, str(k), fontsize=10, va="center", transform=legend_ax.transAxes)
+                legend_ax.text(0.06, y, classifier_display_label(col, k), fontsize=10, va="center", transform=legend_ax.transAxes)
                 y -= 0.03
             if col in GENOMIC_CLASSIFIER_RING_LABELS and has_untested:
                 _legend_missing_genomic_patch(legend_ax, 0.03, y - 0.015, 0.025)
@@ -1174,7 +1109,7 @@ def plot_combined_association_dumbbell(
 
     if arch_group:
         ax.text(
-            -0.22,
+            -0.40,
             float(np.mean(arch_y)),
             "Archetype higher",
             transform=ax.get_yaxis_transform(),
@@ -1187,7 +1122,7 @@ def plot_combined_association_dumbbell(
         )
     if loc_group:
         ax.text(
-            -0.22,
+            -0.40,
             float(np.mean(loc_y)),
             "Location higher",
             transform=ax.get_yaxis_transform(),
@@ -1554,12 +1489,8 @@ CRAMER_V_HIGHLIGHT_MIN = 0.15
 # Drop classifier levels with fewer than this many patients before global chi-square tests
 # (Fig 4B association bars / pairwise). Enrichment dotplots (Fig 4C/D) keep all levels
 # except explicit excludes — see ``compute_group_enrichment_table``.
-MIN_CLASSIFIER_LEVEL_N = 10
-
-# Sparse subtype pooling (Lymphgen has many low-count classes in n=61 discovery cohort).
-MIN_CLASSIFIER_LEVEL_N_BY_METRIC: dict[str, int] = {
-    "Wright 2020 Lymphgen": 5,
-}
+# Uniform global-association cutoff: >5 cases (at least six) for every classifier.
+MIN_CLASSIFIER_LEVEL_N = 6
 
 # Enrichment dotplots: keep rare levels (n≥1). Explicit METRIC_FEATURE_EXCLUDE / skip
 # labels (Other, unknown, …) are still masked.
@@ -1598,7 +1529,7 @@ _STEEN_ECOTYPE_LEVELS = [f"LE{i}" for i in range(1, 10)]
 
 METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     HLA_CLASS_STATE_DISPLAY: HLA_CLASS_STATE_ORDER,
-    "Cell of Origin": ["ABC", "Intermediate", "GCB"],
+    "Cell of Origin": ["ABC", "UNC", "Intermediate", "GCB"],
     "Chapuy 2025 DLBclass": ["C1", "C2", "C3", "C4", "C5"],
     "Ciavarella 2018 Cluster": ["Cold", "Intermediate", "Hot"],
     "Kotlov 2021 LME": ["Depleted", "Inflammatory", "Mesenchymal", "GC-like"],
@@ -1607,7 +1538,7 @@ METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     "Steen 2021 EcoTyper (confident)": _STEEN_ECOTYPE_LEVELS,
     "Steen 2021 EcoTyper (best match)": _STEEN_ECOTYPE_LEVELS,
     "Wright 2020 Lymphgen": ["MCD", "BN2", "BN2/MCD", "ST2", "EZB", "N1", "Other"],
-    "Lacy 2020 HMRN": ["C1", "C2", "C3", "C4", "C5", "C6"],
+    "Lacy 2020 HMRN": ["NEC", "SOCS1/SGK1", "TET2/SGK1", "MYD88", "BCL2", "NOTCH2"],
     "Shen 2023 LymphPlex": ["MCD", "BN2", "EZB", "ST2", "N1", "TP53"],
     "Li 2025 LymphoMAP": ["FMAC", "TEX", "LN"],
     "Tumor Location": ["PCNS", "bone", "nodal", "testis"],
@@ -1656,7 +1587,7 @@ def _prepare_classifier_series(
 ) -> pd.Series:
     """Mask excluded / missing classifier levels before crosstabs."""
     if min_level_n is None:
-        min_level_n = MIN_CLASSIFIER_LEVEL_N_BY_METRIC.get(metric_label, MIN_CLASSIFIER_LEVEL_N)
+        min_level_n = MIN_CLASSIFIER_LEVEL_N
     out = series.astype(str).str.strip()
     exclude = {x.lower() for x in METRIC_FEATURE_EXCLUDE.get(metric_label, ())}
     exclude |= _SKIP_FEATURE_VALUES
@@ -1850,10 +1781,12 @@ def plot_association_enrichment_dotplot_by_classifier(
     height_ratios = []
 
     for metric in metric_order:
-        feats = _order_metric_features(
-            metric,
-            enrichment.loc[enrichment["Metric"] == metric, "Feature"].unique().tolist(),
-        )
+        features = enrichment.loc[enrichment["Metric"] == metric, "Feature"].unique().tolist()
+        # Keep the published GC-like subtype visible even when no cases map to it.
+        # This adds a display row only; no synthetic enrichment tests enter the FDR.
+        if metric == "Kotlov 2021 LME" and "GC-like" not in features:
+            features.append("GC-like")
+        feats = _order_metric_features(metric, features)
         metric_feature_order[metric] = feats
         height_ratios.append(max(1, len(feats)))
 
@@ -1989,8 +1922,20 @@ def plot_association_enrichment_dotplot_by_classifier(
                 zorder=2,
             )
 
+        if metric == "Kotlov 2021 LME" and "GC-like" in feats:
+            cohort = _genomic_classifier_cohort(df)
+            strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
+            gc_cases = cohort["KotlovSig"].astype(str).str.strip().eq("GC-like") & cohort[strat_col].notna()
+            if not gc_cases.any():
+                # Visual placeholders only: absent GC-like has no OR, p-value or FDR.
+                ax.scatter(
+                    [group_x[g] for g in groups], [feats.index("GC-like")] * len(groups),
+                    s=dummy_dot, color="0.82", edgecolors="0.65",
+                    linewidths=0.45, alpha=0.9, zorder=1,
+                )
+
         ax.set_yticks(range(len(feats)))
-        ax.set_yticklabels(feats, fontsize=9)
+        ax.set_yticklabels([classifier_display_label(metric, f) for f in feats], fontsize=9)
 
         ax.set_ylim(len(feats) - 0.5, -0.5)
         ax.set_xlim(-0.35 * x_spacing, x_max + 0.35 * x_spacing)
@@ -2123,9 +2068,9 @@ def _format_group_label(group: str) -> str:
     if g == "testis":
         return "Testis"
     if g == "cytotoxic predominant":
-        return "Cytotoxic"
+        return "Cytotoxic\npredominant"
     if g == "low immune":
-        return "Low immune"
+        return "Low\nimmune"
     if g == "complex immune":
-        return "Complex immune"
+        return "Diverse\nimmune"
     return g

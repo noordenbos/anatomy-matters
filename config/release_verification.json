@@ -1,0 +1,142 @@
+{
+  "version": "1.1.0",
+  "verification_date": "2026-10-22",
+  "python_dependencies": "fresh isolated installation; all installed packages compatible",
+  "fresh_call_comparison": [
+    {
+      "method_group": "genomic",
+      "cohort": "Discovery",
+      "cases": 64,
+      "changed_calls": {
+        "Lymphgen": 0,
+        "DLBclass": 0,
+        "HMRN": 0,
+        "LymphPlex": 0,
+        "genomic_classification_status": 0
+      }
+    },
+    {
+      "method_group": "genomic",
+      "cohort": "Validation",
+      "cases": 221,
+      "changed_calls": {
+        "Lymphgen": 0,
+        "DLBclass": 0,
+        "HMRN": 0,
+        "LymphPlex": 0,
+        "genomic_classification_status": 0
+      }
+    },
+    {
+      "method_group": "transcriptomic",
+      "cohort": "Discovery",
+      "cases": 64,
+      "changed_calls": {
+        "lymphomap": 0,
+        "Lymphoma_Ecotype": 0,
+        "Lymphoma_Ecotype_confident": 0,
+        "Lymphoma_Ecotype_imputed": 0,
+        "New_Ecotype": 0,
+        "KotlovSig": 0,
+        "Kotlov_cluster_id": 0,
+        "Ciav_Cluster": 0,
+        "COO_NanoString": 0
+      }
+    },
+    {
+      "method_group": "transcriptomic",
+      "cohort": "Validation",
+      "cases": 303,
+      "changed_calls": {
+        "lymphomap": 0,
+        "Lymphoma_Ecotype": 0,
+        "Lymphoma_Ecotype_confident": 0,
+        "Lymphoma_Ecotype_imputed": 0,
+        "New_Ecotype": 0,
+        "KotlovSig": 0,
+        "Kotlov_cluster_id": 0,
+        "Ciav_Cluster": 0,
+        "COO_NanoString": 0
+      }
+    }
+  ],
+  "supplemental_benchmark_metrics": "identical to previous verified metrics; now derived from public AnnData",
+  "tests": {
+    "unittest": 67,
+    "standalone": 7
+  },
+  "full_figure_execution": "All 12 manuscript notebooks passed after the native LymphPlex update; Figure 1 also rerun after reversing the LymphGen stack and legend. Figures 4 and 6 subsequently rerun with a uniform >5-case association cutoff.",
+  "classifier_notebook_execution": "All 4 audit/confidence notebooks passed in the clean environment.",
+  "clinical_table_verification": "Combined Table 1 exactly matches the existing analysis, with pseudonymised correction fields embedded.",
+  "publication": "Pending user Zenodo upload and fixed record ID.",
+  "release_checks": "16 executed notebooks; both asset checksums; canonical tables; public source schema; path checks passed.",
+  "data_assets": [
+    {
+      "name": "DLBCL_location_2026.publish.h5ad",
+      "path": "data/DLBCL_location_2026.h5ad",
+      "bytes": 636549348,
+      "sha256": "7d8ebb11c8eb938eee0376ac391326a116dbb34209429a93e1c2b280a81d70fe"
+    },
+    {
+      "name": "panel_call_confidence.public.h5ad",
+      "path": "data/public/panel_call_confidence.public.h5ad",
+      "bytes": 65396590,
+      "sha256": "ee668f4ca1af45f1363bcc06d01c92305d8048655fc95206f7397d94b077abe7"
+    }
+  ],
+  "figure1_final_check": {
+    "inline_images": {
+      "pies": 1,
+      "stacked_bars": 2,
+      "km": 3
+    },
+    "genomic_cases": 61,
+    "genomic_by_location": {
+      "PCNS": 19,
+      "bone": 18,
+      "nodal": 15,
+      "testis": 9
+    },
+    "checks": "Genomic pie/bar denominator regression, LymphGen MCD-left/EZB-right stack and legend regression, full Figure 1 execution and visual inspection passed."
+  },
+  "initial_packaging_verification": {
+    "unchanged_scientific_payload": true,
+    "payload_sha256": "be7e76cc3f7b31f42bfc1f59e7d9b586db59a1e2954a285fb95a9d9abd4ae86f",
+    "intentional_changes": [
+      "uns/classification_inputs",
+      "uns/discovery_clinical_elements",
+      "uns/release_version",
+      "uns/classification_audit_genomic/provenance_json",
+      "uns/classification_audit_transcriptomic/provenance_json"
+    ],
+    "source_adata_unchanged": true
+  },
+  "scientific_payload": {
+    "measurements_and_other_classifiers_unchanged": true,
+    "other_payload_sha256": "921f2cbe6396fed24456570145ca2c0b7b07a2c124e7f7e6a6ebb86fb2b5fafa",
+    "intentional_LymphPlex_changes": {
+      "Discovery": 17,
+      "Validation": 84
+    },
+    "all_other_case_columns_unchanged": true,
+    "original_working_adata_unchanged": true,
+    "previous_release_sha256": "459324502fb9f7d62f929841eed56981b20b9b331d811d409a7e02447f7f169e"
+  },
+  "fresh_call_comparison_status": "Native genomic audit rerun on final release asset: zero differences for all methods; transcriptomic inputs and assignments preserved.",
+  "LymphPlex_method": "Unmodified author GetCluster/PAM with numeric NA; TP53 override; no imputation",
+  "LymphPlex_example_benchmark": "config/classification_audit/lymphplex_missingness_benchmark.json",
+  "association_subtype_filter": {
+    "rule": ">5 cases per subtype (minimum 6), uniform across classifiers",
+    "scope": "Discovery and validation global and pairwise associations; before pairwise complete-case selection",
+    "survival_and_enrichment_criteria": "Preserved",
+    "discovery_EcoTyper": {
+      "n_tested": 23,
+      "n_levels": 2,
+      "retained": [
+        "LE6",
+        "LE8"
+      ]
+    }
+  },
+  "kotlov_dotplot_gc_row": "GC-like retained with small grey display-only placeholders when absent; no fabricated estimates or additional FDR tests."
+}
