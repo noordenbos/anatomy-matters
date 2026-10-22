@@ -1781,10 +1781,12 @@ def plot_association_enrichment_dotplot_by_classifier(
     height_ratios = []
 
     for metric in metric_order:
-        feats = _order_metric_features(
-            metric,
-            enrichment.loc[enrichment["Metric"] == metric, "Feature"].unique().tolist(),
-        )
+        features = enrichment.loc[enrichment["Metric"] == metric, "Feature"].unique().tolist()
+        # Keep the published GC-like subtype visible even when no cases map to it.
+        # This adds a display row only; no synthetic enrichment tests enter the FDR.
+        if metric == "Kotlov 2021 LME" and "GC-like" not in features:
+            features.append("GC-like")
+        feats = _order_metric_features(metric, features)
         metric_feature_order[metric] = feats
         height_ratios.append(max(1, len(feats)))
 
@@ -1919,6 +1921,17 @@ def plot_association_enrichment_dotplot_by_classifier(
                 alpha=0.95,
                 zorder=2,
             )
+
+        if metric == "Kotlov 2021 LME" and "GC-like" in feats:
+            cohort = _genomic_classifier_cohort(df)
+            strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
+            gc_cases = cohort["KotlovSig"].astype(str).str.strip().eq("GC-like") & cohort[strat_col].notna()
+            if not gc_cases.any():
+                ax.text(
+                    0.5, feats.index("GC-like"), "No assigned cases",
+                    transform=ax.get_yaxis_transform(), ha="center", va="center",
+                    fontsize=8, color="0.45",
+                )
 
         ax.set_yticks(range(len(feats)))
         ax.set_yticklabels([classifier_display_label(metric, f) for f in feats], fontsize=9)

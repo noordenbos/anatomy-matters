@@ -1,6 +1,6 @@
 {
   "version": "1.1.0",
-  "verification_date": "2026-10-19",
+  "verification_date": "2026-10-22",
   "python_dependencies": "fresh isolated installation; all installed packages compatible",
   "fresh_call_comparison": [
     {
@@ -62,7 +62,7 @@
   ],
   "supplemental_benchmark_metrics": "identical to previous verified metrics; now derived from public AnnData",
   "tests": {
-    "unittest": 66,
+    "unittest": 67,
     "standalone": 7
   },
   "full_figure_execution": "All 12 manuscript notebooks passed after the native LymphPlex update; Figure 1 also rerun after reversing the LymphGen stack and legend. Figures 4 and 6 subsequently rerun with a uniform >5-case association cutoff.",
@@ -137,5 +137,6 @@
         "LE8"
       ]
     }
-  }
+  },
+  "kotlov_dotplot_gc_row": "GC-like retained as a display-only row with No assigned cases annotation when absent; no fabricated estimates or additional FDR tests."
 }

@@ -11,6 +11,7 @@
 - Filter genomic pies and stacked bars to the same source-supported cohort, label each pie denominator, and explicitly embed inline bar/KM previews.
 - Order Wright/LymphGen stacked bars and legends from MCD on the left to EZB on the right, with Other between them.
 - Apply a uniform >5-case subtype cutoff to discovery/validation global and pairwise classifier associations; preserve separate survival and enrichment criteria.
+- Retain a GC-like row in Kotlov enrichment dotplots when no cases are assigned, marked as unavailable for enrichment testing.
 - Centralize classifier colors and manuscript labels; fix the Figure 1 missing location-count definition.
 - Make audit configuration portable and review-only by default. Record native resource fingerprints and dependency versions.
 - Pair code and both AnnData files through a release manifest; verify SHA-256 on download and reject mismatched existing data without overwriting it.
@@ -21,4 +22,4 @@
 
 Validation panel assignments and discovery raw-normalization provenance retain the qualifications documented in the README. This release does not introduce measured CN data or convert research reconstructions into validated clinical assays.
 
-All 16 notebooks executed successfully in a clean environment; 73 automated checks passed. Fresh classifier calls match the supplied assignments. The publication date and fixed Zenodo record will be added after the data upload.
+All 16 notebooks executed successfully in a clean environment; 74 automated checks passed. Fresh classifier calls match the supplied assignments. The publication date and fixed Zenodo record will be added after the data upload.
