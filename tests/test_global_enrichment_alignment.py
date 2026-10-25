@@ -7,21 +7,21 @@ from scipy.stats import chi2_contingency, MonteCarloMethod
 from dlbcl.integration_figures import run_association_analysis, compute_group_enrichment_table
 
 class GlobalEnrichmentAlignmentTests(unittest.TestCase):
-    def test_rare_and_other_labels_share_dotplot_population_and_coverage(self):
+    def test_rare_subtypes_retained_but_other_excluded_in_both_panels(self):
         x=pd.DataFrame({'Location':['bone','nodal']*6,
                         'Lymphgen':['MCD']*5+['BN2']+['Other']*4+['unknown']*2,
                         'genomic_tested':[True]*11+[False]})
         with tempfile.TemporaryDirectory() as tmp:
             result=run_association_analysis(x,stratifier='location',out_dir=Path(tmp),pairwise_csv='pairs.csv',n_resamples=999,random_seed=7)
         row=result.iloc[0]
-        self.assertEqual((row.n_tested,row.n_eligible,row.n_levels),(10,11,3))
-        self.assertAlmostEqual(row.assignment_coverage,10/11)
+        self.assertEqual((row.n_tested,row.n_eligible,row.n_levels),(6,11,2))
+        self.assertAlmostEqual(row.assignment_coverage,6/11)
         dots=compute_group_enrichment_table(x,stratifier='location')
-        self.assertEqual(set(dots.Feature),{'MCD','BN2','Other'})
-        table=pd.crosstab(x.iloc[:10].Lymphgen,x.iloc[:10].Location)
+        self.assertEqual(set(dots.Feature),{'MCD','BN2'})
+        table=pd.crosstab(x.iloc[:6].Lymphgen,x.iloc[:6].Location)
         reference=chi2_contingency(table,correction=False,method=MonteCarloMethod(n_resamples=999,batch=2000,rng=np.random.default_rng(7)))
         self.assertEqual(row.p_value,reference.pvalue)
-        self.assertAlmostEqual(row.Cramer_V,np.sqrt(reference.statistic/10))
+        self.assertAlmostEqual(row.Cramer_V,np.sqrt(reference.statistic/6))
 
     def test_two_by_two_strength_is_not_zero_when_exact_style_inference_used(self):
         x=pd.DataFrame({'Location':['bone']*4+['nodal']*4,'KotlovSig':['Depleted']*4+['Inflammatory']*4})

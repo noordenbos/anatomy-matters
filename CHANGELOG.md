@@ -10,7 +10,8 @@
 - Distribute a separate external-reference benchmark AnnData and declared panel feature inventories.
 - Filter genomic pies and stacked bars to the same source-supported cohort, label each pie denominator, and explicitly embed inline bar/KM previews.
 - Order Wright/LymphGen stacked bars and legends from MCD on the left to EZB on the right, with Other between them.
-- Match global dumbbell populations to the dotplots, retaining observed rare categories and native confidence rules; use reproducible Monte Carlo p-values and show assignment coverage. Classifier-pair heatmaps and legacy pairwise-group tables retain their >5-case cutoff; survival and enrichment statistics are unchanged.
+- Exclude LymphGen Other from association tests and enrichment dotplots, retaining it in descriptive composition plots.
+- Match global dumbbell populations to the dotplots, retaining observed rare categories and native confidence rules; use reproducible Monte Carlo p-values and show assignment coverage. Classifier-pair heatmaps and legacy pairwise-group tables retain their >5-case cutoff; survival statistics are unchanged.
 - Retain a GC-like row in Kotlov enrichment dotplots when no cases are assigned, using small grey display-only placeholders.
 - Centralize classifier colors and manuscript labels; fix the Figure 1 missing location-count definition.
 - Make audit configuration portable and review-only by default. Record native resource fingerprints and dependency versions.

@@ -1326,7 +1326,7 @@ def run_association_analysis(
     results = []
     for metric in metrics:
         # Exactly the enrichment population: observed levels, author exclusions,
-        # confident EcoTyper calls. Rare levels and LymphGen Other are retained.
+        # confident EcoTyper calls. Rare subtypes are retained; Other is excluded.
         class_series = _prepare_classifier_series(
             df[metric], display_names[metric], strat_series=df[strat_col],
             min_level_n=MIN_CLASSIFIER_LEVEL_N_ENRICHMENT,
@@ -1522,6 +1522,7 @@ METRIC_FEATURE_ORDER: dict[str, list[str]] = {
 }
 
 METRIC_FEATURE_EXCLUDE: dict[str, tuple[str, ...]] = {
+    "Wright 2020 Lymphgen": ("Other", "Others"),
     "Chapuy 2025 DLBclass": ("0",),
     "Shen 2023 LymphPlex": ("Others", "Other"),
 }
