@@ -406,11 +406,31 @@ def _legend_missing_genomic_patch(ax, x: float, y: float, size: float) -> None:
 
 
 def _genomic_classifier_cohort(df: pd.DataFrame) -> pd.DataFrame:
-    """Restrict to patients with source WES variants (for Fig 4B–4D statistics)."""
+    """Restrict genomic analyses to cases with source variant inputs."""
     if "genomic_tested" not in df.columns:
         return df
     return df.loc[df["genomic_tested"]].copy()
 
+
+
+GENOMIC_ASSOCIATION_COLUMNS = frozenset({"Lymphgen", "DLBclass", "HMRN", "LymphPlex"})
+
+
+def _classifier_source_cohort(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """Assay availability before classifier confidence/label exclusions.
+
+    Genomic availability never removes a case from a non-genomic analysis.
+    HLA requires an assessable state; GEP confidence is handled after eligibility.
+    """
+    if column in GENOMIC_ASSOCIATION_COLUMNS:
+        return _genomic_classifier_cohort(df)
+    if column == HLA_CLASS_STATE_COL:
+        values = df[column]
+        available = values.notna() & ~values.astype(str).str.strip().str.lower().isin(
+            CROSSTAB_EXCLUDE_LEVELS | {"<na>", "none"}
+        )
+        return df.loc[available].copy()
+    return df
 
 def _donut_segment_linewidth(n_patients: int, *, linewidth: float | None = None) -> float:
     """Edge width for circos ring segments; thinner when many patients."""
@@ -1204,7 +1224,6 @@ def compute_classifier_pairwise_associations(
     columns: list[tuple[str, str]] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Pairwise Cramér's V between patient-level classifiers (complete cases per pair)."""
-    df = _genomic_classifier_cohort(df)
     pairs = columns or CLASSIFIER_PAIRWISE_COLUMNS
     present = [(col, label) for col, label in pairs if col in df.columns]
     labels = [label for _, label in present]
@@ -1212,8 +1231,9 @@ def compute_classifier_pairwise_associations(
     records: list[dict] = []
     for i, (col_a, label_a) in enumerate(present):
         for col_b, label_b in present[i + 1 :]:
-            series_a = _prepare_classifier_series(df[col_a], label_a)
-            series_b = _prepare_classifier_series(df[col_b], label_b)
+            pair_df = _classifier_source_cohort(_classifier_source_cohort(df, col_a), col_b)
+            series_a = _prepare_classifier_series(pair_df[col_a], label_a)
+            series_b = _prepare_classifier_series(pair_df[col_b], label_b)
             series_a = _mask_nonspecific_classifier_levels(series_a)
             series_b = _mask_nonspecific_classifier_levels(series_b)
             valid = series_a.notna() & series_b.notna()
@@ -1229,6 +1249,7 @@ def compute_classifier_pairwise_associations(
                     "classifier_a": label_a,
                     "classifier_b": label_b,
                     "n": int(valid.sum()),
+                    "n_eligible": len(pair_df),
                     "Cramer_V": cramer_v,
                     "p_value": p_value,
                 }
@@ -1318,27 +1339,28 @@ def run_association_analysis(
 
     The legacy pairwise-group export below retains its separate >5-case filter.
     """
-    df = _genomic_classifier_cohort(df)
     strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
     for metric in metrics:
+        metric_df = _classifier_source_cohort(df, metric)
         # Exactly the enrichment population: observed levels, author exclusions,
         # confident EcoTyper calls. Rare subtypes are retained; Other is excluded.
         class_series = _prepare_classifier_series(
-            df[metric], display_names[metric], strat_series=df[strat_col],
+            metric_df[metric], display_names[metric], strat_series=metric_df[strat_col],
             min_level_n=MIN_CLASSIFIER_LEVEL_N_ENRICHMENT,
         )
         valid = class_series.notna()
-        n_eligible = int(df[strat_col].notna().sum())
+        n_eligible = int(metric_df[strat_col].notna().sum())
         n_tested = int(valid.sum())
-        table = pd.crosstab(class_series[valid], df.loc[valid, strat_col].astype(str))
+        table = pd.crosstab(class_series[valid], metric_df.loc[valid, strat_col].astype(str))
         record = dict(
             Metric=display_names[metric], Test_Type="NA", Chi2_or_OR=np.nan,
             p_value=np.nan, Cramer_V=np.nan, Effect_Size="NA",
             n_tested=n_tested, n_eligible=n_eligible,
+            n_cohort=int(df[strat_col].notna().sum()),
             assignment_coverage=n_tested/n_eligible if n_eligible else np.nan,
             n_levels=table.shape[0], n_strata=table.shape[1],
             min_expected=np.nan, expected_cells_below5=np.nan,
@@ -1377,20 +1399,22 @@ def run_association_analysis(
         else []
     )
     for metric in metrics:
+        metric_df = _classifier_source_cohort(df, metric)
         metric_label = display_names[metric]
         class_series = _prepare_classifier_series(
-            df[metric], metric_label, strat_series=df[strat_col]
+            metric_df[metric], metric_label, strat_series=metric_df[strat_col]
         )
         class_series = _mask_nonspecific_classifier_levels(class_series)
         valid = class_series.notna()
         contingency = pd.crosstab(
             class_series[valid],
-            df.loc[valid, strat_col].astype(str),
+            metric_df.loc[valid, strat_col].astype(str),
         )
         contingency = _drop_nonspecific_crosstab_levels(contingency)
         metric_values = [v for v in contingency.index.tolist() if not _is_nonspecific_classifier_level(v)]
-        for i, g1 in enumerate(groups):
-            for g2 in groups[i + 1 :]:
+        metric_groups = [g for g in groups if g in contingency.columns]
+        for i, g1 in enumerate(metric_groups):
+            for g2 in metric_groups[i + 1 :]:
                 for metric_val in metric_values:
                     if metric_val not in contingency.index:
                         continue
@@ -1614,11 +1638,10 @@ def compute_group_enrichment_table(
 
     FDR is Benjamini–Hochberg **within each classifier** (not across the full dotplot).
 
-    Unlike global association tests (Fig 4B), rare classifier levels are kept by default
+    As in global association tests (Fig 4B), rare classifier levels are kept by default
     (``min_level_n=1``) so every observed subtype appears as a row in Fig 4C/4D.
     Catch-all labels in ``METRIC_FEATURE_EXCLUDE`` / ``_SKIP_FEATURE_VALUES`` are still omitted.
     """
-    df = _genomic_classifier_cohort(df)
     strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
 
@@ -1626,15 +1649,16 @@ def compute_group_enrichment_table(
     rows: list[dict] = []
 
     for metric in metrics:
+        metric_df = _classifier_source_cohort(df, metric)
         metric_label = display_names[metric]
         metric_series = _prepare_classifier_series(
-            df[metric],
+            metric_df[metric],
             metric_label,
-            strat_series=df[strat_col],
+            strat_series=metric_df[strat_col],
             min_level_n=min_level_n,
         )
         valid = metric_series.notna()
-        strat_valid = df.loc[valid, strat_col].astype(str)
+        strat_valid = metric_df.loc[valid, strat_col].astype(str)
         for metric_val in metric_series.loc[valid].unique():
             val = str(metric_val).strip()
 
@@ -1901,7 +1925,7 @@ def plot_association_enrichment_dotplot_by_classifier(
             )
 
         if metric == "Kotlov 2021 LME" and "GC-like" in feats:
-            cohort = _genomic_classifier_cohort(df)
+            cohort = _classifier_source_cohort(df, "KotlovSig")
             strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
             gc_cases = cohort["KotlovSig"].astype(str).str.strip().eq("GC-like") & cohort[strat_col].notna()
             if not gc_cases.any():
