@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2_contingency, fisher_exact
+from scipy.stats import chi2_contingency, fisher_exact, MonteCarloMethod
 
 from .classifier_colors import (
     classifier_bindings, classifier_color, classifier_key, classifier_palette, is_missing_label,
@@ -1083,12 +1083,28 @@ def plot_combined_association_dumbbell(
     y_max = (loc_y[-1] if len(loc_group) else arch_y[-1]) if (arch_group or loc_group) else 0.0
 
     fig_h = max(4.0, 0.38 * (len(arch_group) + len(loc_group) + (1 if group_gap else 0)) + 2.2)
-    fig, ax = plt.subplots(figsize=(7.8, fig_h))
+    fig, ax = plt.subplots(figsize=(9.0, fig_h))
+
+    coverage_tables = [x.set_index("Metric") for x in (location_results, archetype_results)]
+    show_coverage = all({"n_tested", "n_eligible"} <= set(x.columns) for x in coverage_tables)
+    if show_coverage:
+        ax.text(1.03, 0.995, "Included / eligible", transform=ax.transAxes,
+                fontsize=8, color="0.35", ha="left", va="top")
 
     all_v: list[float] = []
 
     def _plot_rows(rows: list[dict[str, object]], y_values: np.ndarray) -> None:
         for row, y in zip(rows, y_values):
+            if show_coverage:
+                coverage = []
+                for table in coverage_tables:
+                    if row["metric"] in table.index:
+                        entry = table.loc[row["metric"]]
+                        n, eligible = int(entry.n_tested), int(entry.n_eligible)
+                        coverage.append(f"{n}/{eligible} ({n/eligible:.0%})" if eligible else "0/0")
+                label = coverage[0] if len(set(coverage)) == 1 else " / ".join(coverage)
+                ax.text(1.03, y, label, transform=ax.get_yaxis_transform(),
+                        va="center", fontsize=8, color="0.35")
             vl = float(row["loc_v"]) if np.isfinite(row["loc_v"]) else np.nan
             va = float(row["arch_v"]) if np.isfinite(row["arch_v"]) else np.nan
             loc_fdr = float(row["loc_fdr"]) if np.isfinite(row["loc_fdr"]) else np.nan
@@ -1167,7 +1183,7 @@ def plot_combined_association_dumbbell(
         ),
     ]
     ax.legend(handles=legend_handles, loc="lower right", fontsize=7.5, framealpha=0.95)
-    fig.subplots_adjust(left=0.36)
+    fig.subplots_adjust(left=0.33, right=0.79)
     _save_show_close(fig, out_svg, show=show)
     return out_svg
 
@@ -1295,8 +1311,13 @@ def run_association_analysis(
     pairwise_csv: str,
     barchart_svg: Path | None = None,
     barchart_title: str = "",
+    n_resamples: int = 99999,
+    random_seed: int = 20261025,
 ) -> pd.DataFrame:
-    """Global + pairwise association tests vs Location or archetype (spatial protein)."""
+    """Global association on dotplot inputs, with fixed-margin Monte Carlo p-values.
+
+    The legacy pairwise-group export below retains its separate >5-case filter.
+    """
     df = _genomic_classifier_cohort(df)
     strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
@@ -1304,83 +1325,41 @@ def run_association_analysis(
 
     results = []
     for metric in metrics:
-        metric_label = display_names[metric]
+        # Exactly the enrichment population: observed levels, author exclusions,
+        # confident EcoTyper calls. Rare levels and LymphGen Other are retained.
         class_series = _prepare_classifier_series(
-            df[metric], metric_label, strat_series=df[strat_col]
+            df[metric], display_names[metric], strat_series=df[strat_col],
+            min_level_n=MIN_CLASSIFIER_LEVEL_N_ENRICHMENT,
         )
-        class_series = _mask_nonspecific_classifier_levels(class_series)
         valid = class_series.notna()
+        n_eligible = int(df[strat_col].notna().sum())
         n_tested = int(valid.sum())
-        n_levels = int(class_series[valid].nunique()) if n_tested else 0
-        if n_tested == 0 or n_levels < 2:
-            results.append(
-                {
-                    "Metric": display_names[metric],
-                    "Test_Type": "NA",
-                    "Chi2_or_OR": None,
-                    "p_value": float("nan"),
-                    "Cramer_V": None,
-                    "Effect_Size": "NA",
-                    "n_tested": n_tested,
-                    "n_levels": n_levels,
-                }
-            )
-            continue
-        contingency_test = pd.crosstab(
-            class_series[valid],
-            df.loc[valid, strat_col].astype(str),
+        table = pd.crosstab(class_series[valid], df.loc[valid, strat_col].astype(str))
+        record = dict(
+            Metric=display_names[metric], Test_Type="NA", Chi2_or_OR=np.nan,
+            p_value=np.nan, Cramer_V=np.nan, Effect_Size="NA",
+            n_tested=n_tested, n_eligible=n_eligible,
+            assignment_coverage=n_tested/n_eligible if n_eligible else np.nan,
+            n_levels=table.shape[0], n_strata=table.shape[1],
+            min_expected=np.nan, expected_cells_below5=np.nan,
+            n_resamples=0, random_seed=random_seed,
         )
-        contingency_test = _drop_nonspecific_crosstab_levels(contingency_test)
-        if contingency_test.shape[0] < 2 or contingency_test.shape[1] < 2:
-            results.append(
-                {
-                    "Metric": display_names[metric],
-                    "Test_Type": "NA",
-                    "Chi2_or_OR": None,
-                    "p_value": float("nan"),
-                    "Cramer_V": None,
-                    "Effect_Size": "NA",
-                    "n_tested": n_tested,
-                    "n_levels": n_levels,
-                }
+        if min(table.shape) >= 2:
+            test = chi2_contingency(
+                table, correction=False,
+                method=MonteCarloMethod(n_resamples=n_resamples, batch=2000,
+                                       rng=np.random.default_rng(random_seed)),
             )
-            continue
-        if contingency_test.empty or contingency_test.size == 0:
-            results.append(
-                {
-                    "Metric": display_names[metric],
-                    "Test_Type": "NA",
-                    "Chi2_or_OR": None,
-                    "p_value": float("nan"),
-                    "Cramer_V": None,
-                    "Effect_Size": "NA",
-                    "n_tested": n_tested,
-                    "n_levels": n_levels,
-                }
+            v = float(np.sqrt(test.statistic/(n_tested*(min(table.shape)-1))))
+            record.update(
+                Test_Type="Chi-square (Monte Carlo)", Chi2_or_OR=float(test.statistic),
+                p_value=float(test.pvalue), Cramer_V=v,
+                Effect_Size="Negligible" if v < .1 else "Small" if v < .3 else "Medium" if v < .5 else "Large",
+                min_expected=float(test.expected_freq.min()),
+                expected_cells_below5=int((test.expected_freq < 5).sum()),
+                n_resamples=n_resamples,
             )
-            continue
-        test_type, p_value, chi2_or_or, cramer_v = _global_association_test(contingency_test)
-        effect = (
-            "Negligible"
-            if cramer_v < 0.1
-            else "Small"
-            if cramer_v < 0.3
-            else "Medium"
-            if cramer_v < 0.5
-            else "Large"
-        )
-        results.append(
-            {
-                "Metric": display_names[metric],
-                "Test_Type": test_type,
-                "Chi2_or_OR": chi2_or_or,
-                "p_value": p_value,
-                "Cramer_V": cramer_v,
-                "Effect_Size": effect,
-                "n_tested": n_tested,
-                "n_levels": n_levels,
-            }
-        )
+        results.append(record)
 
     results_df = pd.DataFrame(results)
     results_df["FDR"] = benjamini_hochberg(results_df["p_value"].values)
@@ -1486,10 +1465,8 @@ def _drop_nonspecific_crosstab_levels(table: pd.DataFrame) -> pd.DataFrame:
 # Global association barchart: require at least this Cramér's V to highlight FDR significance.
 CRAMER_V_HIGHLIGHT_MIN = 0.15
 
-# Drop classifier levels with fewer than this many patients before global chi-square tests
-# (Fig 4B association bars / pairwise). Enrichment dotplots (Fig 4C/D) keep all levels
-# except explicit excludes — see ``compute_group_enrichment_table``.
-# Uniform global-association cutoff: >5 cases (at least six) for every classifier.
+# Separate classifier-pair heatmaps and legacy group-pair tables retain the
+# >5-case filter. Global dumbbells follow the enrichment population instead.
 MIN_CLASSIFIER_LEVEL_N = 6
 
 # Enrichment dotplots: keep rare levels (n≥1). Explicit METRIC_FEATURE_EXCLUDE / skip

@@ -34,8 +34,10 @@ class AssociationCutoffTests(unittest.TestCase):
         label = 'Steen 2021 EcoTyper (confident)'
         for results in [location, archetype]:
             row = results.set_index('Metric').loc[label]
-            self.assertEqual(row.n_tested, 23)
-            self.assertEqual(row.n_levels, 2)
+            self.assertEqual(row.n_tested, 28)
+            self.assertEqual(row.n_eligible, 28)
+            self.assertEqual(row.assignment_coverage, 1.)
+            self.assertEqual(row.n_levels, 3)
             self.assertTrue(np.isfinite(row.Cramer_V))
         groups = _association_dumbbell_rows(location, archetype)
         self.assertIn(label, [r['metric'] for group in groups for r in group])
