@@ -10,7 +10,8 @@
 - Distribute a separate external-reference benchmark AnnData and declared panel feature inventories.
 - Filter genomic pies and stacked bars to the same source-supported cohort, label each pie denominator, and explicitly embed inline bar/KM previews.
 - Order Wright/LymphGen stacked bars and legends from MCD on the left to EZB on the right, with Other between them.
-- Exclude LymphGen Other from association tests and enrichment dotplots, retaining it in descriptive composition plots.
+- Exclude remainder categories (LymphGen Other, LymphPlex Others, DLBclass Unclassified, HMRN NEC and COO UNC/Unclassified) consistently from association tests and enrichment dotplots, retaining them in descriptive composition plots and assay-eligible denominators. Keep the biological Ciavarella Intermediate class.
+- Clarify panel B classifier labels and show included/eligible counts without percentages, with an explicit exclusion note.
 - Apply assay eligibility per classifier: genomic-source restrictions do not remove transcriptomic, spatial or HLA cases; pairwise matrices use the relevant assay intersection.
 - Match global dumbbell populations to the dotplots, retaining observed rare categories and native confidence rules; use reproducible Monte Carlo p-values and show assignment coverage. Classifier-pair heatmaps and legacy pairwise-group tables retain their >5-case cutoff; survival statistics are unchanged.
 - Retain a GC-like row in Kotlov enrichment dotplots when no cases are assigned, using small grey display-only placeholders.
@@ -24,4 +25,4 @@
 
 Validation panel assignments and discovery raw-normalization provenance retain the qualifications documented in the README. This release does not introduce measured CN data or convert research reconstructions into validated clinical assays.
 
-All 16 notebooks executed successfully in a clean environment; 80 automated checks passed. Fresh classifier calls match the supplied assignments. The publication date and fixed Zenodo record will be added after the data upload.
+All 16 notebooks executed successfully in a clean environment; 81 automated checks passed. Fresh classifier calls match the supplied assignments. The publication date and fixed Zenodo record will be added after the data upload.

@@ -62,7 +62,7 @@
   ],
   "supplemental_benchmark_metrics": "identical to previous verified metrics; now derived from public AnnData",
   "tests": {
-    "unittest": 73,
+    "unittest": 74,
     "standalone": 7
   },
   "full_figure_execution": "All 12 manuscript notebooks passed after the native LymphPlex update; Figure 1 also rerun after reversing the LymphGen stack and legend. Figures 4 and 6 subsequently rerun with a uniform >5-case association cutoff.",
@@ -130,10 +130,11 @@
     "classifier_pair_heatmap_and_legacy_pairwise_group_tables": ">5 cases per subtype",
     "inference": "99999 fixed-margin Monte Carlo draws, seed 20261025; BH FDR per stratifier",
     "coverage": "Included assignments divided by eligible cases; printed beside each dumbbell row",
-    "enrichment_and_survival": "Unchanged",
+    "enrichment_and_survival": "Enrichment shares the remainder exclusions; survival unchanged.",
     "LymphGen_Other": "Excluded from both global dumbbell and enrichment tests, retained in composition bars/pies.",
-    "assay_populations": "Genomic source eligibility applies only to genomic classifiers; GEP and spatial measures use the full cohort, HLA uses assessable states; classifier-pair matrices use the relevant assay intersection."
+    "assay_populations": "Genomic source eligibility applies only to genomic classifiers; GEP and spatial measures use the full cohort, HLA uses assessable states; classifier-pair matrices use the relevant assay intersection.",
+    "remainder_categories": "Exclude LymphGen Other, LymphPlex Others, DLBclass 0/Unclassified, HMRN NEC and COO UNC/Unclassified/Intermediate from association tests; retain in panel A and eligible denominators. Ciavarella Intermediate remains included."
   },
   "kotlov_dotplot_gc_row": "GC-like retained with small grey display-only placeholders when absent; no fabricated estimates or additional FDR tests.",
-  "matched_association_verification": "Figures 4 and 6 executed with classifier-specific assay populations; tests verify assay denominators, confidence coverage, pair intersections and aligned global/enrichment populations."
+  "matched_association_verification": "Figures 4 and 6 rerun with shared remainder exclusions in global/enrichment tests, requested row labels and counts without percentages; both rendered figures inspected."
 }

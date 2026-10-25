@@ -941,6 +941,16 @@ ASSOCIATION_DUMBBELL_SHORT_LABELS: dict[str, str] = {
     "Shen 2023 LymphPlex": "LymphPlex",
 }
 
+ASSOCIATION_DUMBBELL_ROW_LABELS = {
+    **ASSOCIATION_DUMBBELL_SHORT_LABELS,
+    "This work": "Tumor Immune Archetype\n(this work)",
+    "Tumor Location": "Location\n(this work)",
+    HLA_CLASS_STATE_DISPLAY: "HLA class\n(this work)",
+    "Kotlov 2021 LME": "LME (Kotlov)",
+    "Cell of Origin": "COO (Lymph2cx)",
+    "Steen 2021 EcoTyper (confident)": "EcoTyper",
+}
+
 CLASSIFIER_PAIRWISE_COLUMNS: list[tuple[str, str]] = [
     ("tumorimmune_archetype", "This work"),
     ("Location", "Tumor Location"),
@@ -1121,7 +1131,7 @@ def plot_combined_association_dumbbell(
                     if row["metric"] in table.index:
                         entry = table.loc[row["metric"]]
                         n, eligible = int(entry.n_tested), int(entry.n_eligible)
-                        coverage.append(f"{n}/{eligible} ({n/eligible:.0%})" if eligible else "0/0")
+                        coverage.append(f"{n}/{eligible}")
                 label = coverage[0] if len(set(coverage)) == 1 else " / ".join(coverage)
                 ax.text(1.03, y, label, transform=ax.get_yaxis_transform(),
                         va="center", fontsize=8, color="0.35")
@@ -1145,7 +1155,7 @@ def plot_combined_association_dumbbell(
 
     if arch_group:
         ax.text(
-            -0.40,
+            -0.64,
             float(np.mean(arch_y)),
             "Archetype higher",
             transform=ax.get_yaxis_transform(),
@@ -1158,7 +1168,7 @@ def plot_combined_association_dumbbell(
         )
     if loc_group:
         ax.text(
-            -0.40,
+            -0.64,
             float(np.mean(loc_y)),
             "Location higher",
             transform=ax.get_yaxis_transform(),
@@ -1176,8 +1186,8 @@ def plot_combined_association_dumbbell(
 
     y_ticks = list(arch_y) + list(loc_y)
     y_labels = (
-        [ASSOCIATION_DUMBBELL_SHORT_LABELS.get(str(r["metric"]), str(r["metric"])) for r in arch_group]
-        + [ASSOCIATION_DUMBBELL_SHORT_LABELS.get(str(r["metric"]), str(r["metric"])) for r in loc_group]
+        [ASSOCIATION_DUMBBELL_ROW_LABELS.get(str(r["metric"]), str(r["metric"])) for r in arch_group]
+        + [ASSOCIATION_DUMBBELL_ROW_LABELS.get(str(r["metric"]), str(r["metric"])) for r in loc_group]
     )
 
     xmax = float(np.nanmax(all_v)) if all_v else 0.5
@@ -1203,7 +1213,10 @@ def plot_combined_association_dumbbell(
         ),
     ]
     ax.legend(handles=legend_handles, loc="lower right", fontsize=7.5, framealpha=0.95)
-    fig.subplots_adjust(left=0.33, right=0.79)
+    fig.subplots_adjust(left=0.38, right=0.83, bottom=0.15)
+    fig.text(0.38, 0.025, "Excluded: remainder categories and missing/unassigned calls.\n"
+             "EcoTyper uses confident calls; counts show included / assay-eligible cases.",
+             fontsize=7.5, color="0.35", ha="left", va="bottom")
     _save_show_close(fig, out_svg, show=show)
     return out_svg
 
@@ -1545,9 +1558,14 @@ METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     "Tumor Location": ["PCNS", "bone", "nodal", "testis"],
 }
 
+# Remainder outputs stay in composition plots and the assay-eligible denominator,
+# but are excluded consistently from association tests. Intermediate is a remainder
+# only for COO; the Ciavarella middle class is a biological subtype and is retained.
 METRIC_FEATURE_EXCLUDE: dict[str, tuple[str, ...]] = {
     "Wright 2020 Lymphgen": ("Other", "Others"),
-    "Chapuy 2025 DLBclass": ("0",),
+    "Chapuy 2025 DLBclass": ("0", "Unclassified"),
+    "Lacy 2020 HMRN": ("NEC",),
+    "Cell of Origin": ("UNC", "Unclassified", "Intermediate"),
     "Shen 2023 LymphPlex": ("Others", "Other"),
 }
 

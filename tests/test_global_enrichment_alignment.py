@@ -37,3 +37,26 @@ class GlobalEnrichmentAlignmentTests(unittest.TestCase):
         row=result.iloc[0]
         self.assertEqual((row.n_tested,row.n_eligible),(4,6))
         self.assertTrue(np.isnan(row.Cramer_V) and np.isnan(row.p_value))
+
+    def test_remainder_outputs_excluded_without_removing_biological_intermediate(self):
+        x=pd.DataFrame({
+            'Location':['bone','nodal']*4,
+            'HMRN':['MYD88','BCL2']*3+['NEC','unknown'],
+            'COO_NanoString':['ABC','GCB']*2+['UNC','Unclassified','Intermediate','unknown'],
+            'Ciav_Cluster':['Cold','Hot','Intermediate','Cold','Hot','Intermediate','Cold','Hot'],
+            'DLBclass':['C1','C2']*3+['0','Unclassified'],
+            'genomic_tested':[True]*8,
+        })
+        with tempfile.TemporaryDirectory() as tmp:
+            result=run_association_analysis(x,stratifier='location',out_dir=Path(tmp),pairwise_csv='pairs.csv',n_resamples=999).set_index('Metric')
+        dots=compute_group_enrichment_table(x,stratifier='location')
+        expected={
+            'Lacy 2020 HMRN':(6,{'MYD88','BCL2'}),
+            'Cell of Origin':(4,{'ABC','GCB'}),
+            'Ciavarella 2018 Cluster':(8,{'Cold','Hot','Intermediate'}),
+            'Chapuy 2025 DLBclass':(6,{'C1','C2'}),
+        }
+        for metric,(n,features) in expected.items():
+            with self.subTest(metric=metric):
+                self.assertEqual((result.loc[metric,'n_tested'],result.loc[metric,'n_eligible']),(n,8))
+                self.assertEqual(set(dots.loc[dots.Metric==metric,'Feature']),features)
