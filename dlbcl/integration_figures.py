@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from .display_labels import classifier_display_label, finalize_figure_labels
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2_contingency, fisher_exact
+from scipy.stats import chi2_contingency, fisher_exact, MonteCarloMethod
+
+from .classifier_colors import (
+    classifier_bindings, classifier_color, classifier_key, classifier_palette, is_missing_label,
+)
 
 ARCHETYPE_NAME_MAP = {
     1: "low immune",
@@ -72,83 +78,7 @@ DONUT_COLOR_PALETTES = {
         "NA": "whitesmoke",
     },
     HLA_CLASS_STATE_LABEL: HLA_CLASS_STATE_COLORS,
-    "Li 2025\nLymphoMAP": {
-        "FMAC": "#984ea3",
-        "LN": "#ff7f00",
-        "TEX": "#ffff33",
-        "NA": "whitesmoke",
-    },
-    "Kotlov 2021\nLME": {
-        "Depleted": "mediumpurple",
-        "GC-like": "darkorange",
-        "Inflammatory": "crimson",
-        "Mesenchymal": "darkgoldenrod",
-        "NA": "whitesmoke",
-    },
-    "Ciavarella 2018\nCluster": {
-        "Hot": "coral",
-        "Intermediate": "orchid",
-        "Cold": "darkorchid",
-        "NA": "whitesmoke",
-    },
-    "Steen 2021\nLymphoma_Ecotype": {
-        "LE1": "#a6cee3",
-        "LE2": "#e78ac3",
-        "LE3": "#a6d854",
-        "LE4": "#ffd92f",
-        "LE5": "#b2df8a",
-        "LE6": "#fb8072",
-        "LE7": "#80b1d3",
-        "LE8": "#e5c494",
-        "LE9": "#fccde5",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Alizadeh 2000\nCell of Origin": {
-        "GCB": "gold",
-        "ABC": "darkviolet",
-        "Intermediate": "pink",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Wright 2020\nLymphgen": {
-        "MCD": "blueviolet",
-        "BN2": "#80b1d3",
-        "EZB": "darkgoldenrod",
-        "Other": "lightgray",
-        "ST2": "#fdb462",
-        "BN2/MCD": "purple",
-        "unknown": "whitesmoke",
-        "NA": "whitesmoke",
-    },
-    "Chapuy 2025\nDLBclass": {
-        "C1": "darkgoldenrod",
-        "C3": "orange",
-        "C4": "#d62728",
-        "C5": "indigo",
-        "0": "lightgray",
-        "NA": "whitesmoke",
-    },
-    "Lacy 2020\nHMRN": {
-        "C1": "darkgoldenrod",
-        "C2": "#1b9e77",
-        "C3": "orange",
-        "C4": "#d62728",
-        "C5": "indigo",
-        "C6": "#7570b3",
-        "NA": "whitesmoke",
-    },
-    "Shen 2023\nLymphPlex": {
-        "MCD": "blueviolet",
-        "BN2": "#80b1d3",
-        "EZB": "darkgoldenrod",
-        "ST2": "#fdb462",
-        "N1": "#b3de69",
-        "TP53": "#d62728",
-        "Others": "lightgray",
-        "Other": "lightgray",
-        "NA": "whitesmoke",
-    },
+    **{name: classifier_palette(name) for name in classifier_bindings()},
 }
 
 
@@ -170,9 +100,11 @@ def _save_show_close(fig, out_svg: Path | None = None, *, show: bool = True) -> 
         out_svg.parent.mkdir(parents=True, exist_ok=True)
         # Keep text as font elements (not path outlines) for Illustrator/Inkscape editability.
         with plt.rc_context({"svg.fonttype": "none", "pdf.fonttype": 42, "ps.fonttype": 42}):
+            finalize_figure_labels(fig)
             fig.savefig(out_svg, format="svg", bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
 
 
@@ -260,7 +192,7 @@ def build_integration_metadata(
     meta["tumorimmune_archetype"] = meta["tumorimmune_archetype_id"].map(ARCHETYPE_NAME_MAP)
 
     for old_col, new_col in COLUMN_ALIASES.items():
-        if old_col in meta.columns:
+        if old_col in meta.columns and new_col not in meta.columns:
             meta[new_col] = meta[old_col]
 
     from .validation_classifications import finalize_lymphoma_ecotype_columns
@@ -393,6 +325,8 @@ def order_patients_hierarchical(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _donut_color(col: str, val) -> str:
+    if classifier_key(col) is not None:
+        return classifier_color(col, val)
     palette = DONUT_COLOR_PALETTES.get(col, {})
     return palette.get(str(val), palette.get("NA", "#cccccc"))
 
@@ -472,11 +406,31 @@ def _legend_missing_genomic_patch(ax, x: float, y: float, size: float) -> None:
 
 
 def _genomic_classifier_cohort(df: pd.DataFrame) -> pd.DataFrame:
-    """Restrict to patients with source WES variants (for Fig 4B–4D statistics)."""
+    """Restrict genomic analyses to cases with source variant inputs."""
     if "genomic_tested" not in df.columns:
         return df
     return df.loc[df["genomic_tested"]].copy()
 
+
+
+GENOMIC_ASSOCIATION_COLUMNS = frozenset({"Lymphgen", "DLBclass", "HMRN", "LymphPlex"})
+
+
+def _classifier_source_cohort(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """Assay availability before classifier confidence/label exclusions.
+
+    Genomic availability never removes a case from a non-genomic analysis.
+    HLA requires an assessable state; GEP confidence is handled after eligibility.
+    """
+    if column in GENOMIC_ASSOCIATION_COLUMNS:
+        return _genomic_classifier_cohort(df)
+    if column == HLA_CLASS_STATE_COL:
+        values = df[column]
+        available = values.notna() & ~values.astype(str).str.strip().str.lower().isin(
+            CROSSTAB_EXCLUDE_LEVELS | {"<na>", "none"}
+        )
+        return df.loc[available].copy()
+    return df
 
 def _donut_segment_linewidth(n_patients: int, *, linewidth: float | None = None) -> float:
     """Edge width for circos ring segments; thinner when many patients."""
@@ -637,9 +591,10 @@ def plot_donut_circos(
         y = 0.95
         for col in legend_cols:
             palette = DONUT_COLOR_PALETTES.get(col, {})
-            legend_ax.text(0.01, y, col, fontsize=12, fontweight="bold", va="top")
+            legend_ax.text(0.01, y, col.replace("\n", " "), fontsize=12, fontweight="bold", va="top")
             y -= 0.04
-            entries = [(k, v) for k, v in palette.items() if k != "NA"]
+            observed = {str(v).strip() for v in work[col].dropna().unique()}
+            entries = [(k, v) for k, v in palette.items() if k in observed and not is_missing_label(k)]
             if col == "Tumor Immune Archetype\n(this work)":
                 order = ["cytotoxic predominant", "low immune", "complex immune"]
                 rank = {name: i for i, name in enumerate(order)}
@@ -651,7 +606,7 @@ def plot_donut_circos(
                 legend_ax.add_patch(
                     plt.Rectangle((0.03, y - 0.015), 0.025, 0.025, color=v, transform=legend_ax.transAxes, clip_on=False)
                 )
-                legend_ax.text(0.06, y, str(k), fontsize=10, va="center", transform=legend_ax.transAxes)
+                legend_ax.text(0.06, y, classifier_display_label(col, k), fontsize=10, va="center", transform=legend_ax.transAxes)
                 y -= 0.03
             if col in GENOMIC_CLASSIFIER_RING_LABELS and has_untested:
                 _legend_missing_genomic_patch(legend_ax, 0.03, y - 0.015, 0.025)
@@ -986,6 +941,16 @@ ASSOCIATION_DUMBBELL_SHORT_LABELS: dict[str, str] = {
     "Shen 2023 LymphPlex": "LymphPlex",
 }
 
+ASSOCIATION_DUMBBELL_ROW_LABELS = {
+    **ASSOCIATION_DUMBBELL_SHORT_LABELS,
+    "This work": "Tumor Immune Archetype\n(this work)",
+    "Tumor Location": "Location\n(this work)",
+    HLA_CLASS_STATE_DISPLAY: "HLA class\n(this work)",
+    "Kotlov 2021 LME": "LME (Kotlov)",
+    "Cell of Origin": "COO (Lymph2cx)",
+    "Steen 2021 EcoTyper (confident)": "EcoTyper",
+}
+
 CLASSIFIER_PAIRWISE_COLUMNS: list[tuple[str, str]] = [
     ("tumorimmune_archetype", "This work"),
     ("Location", "Tumor Location"),
@@ -1148,12 +1113,28 @@ def plot_combined_association_dumbbell(
     y_max = (loc_y[-1] if len(loc_group) else arch_y[-1]) if (arch_group or loc_group) else 0.0
 
     fig_h = max(4.0, 0.38 * (len(arch_group) + len(loc_group) + (1 if group_gap else 0)) + 2.2)
-    fig, ax = plt.subplots(figsize=(7.8, fig_h))
+    fig, ax = plt.subplots(figsize=(9.0, fig_h))
+
+    coverage_tables = [x.set_index("Metric") for x in (location_results, archetype_results)]
+    show_coverage = all({"n_tested", "n_eligible"} <= set(x.columns) for x in coverage_tables)
+    if show_coverage:
+        ax.text(1.03, 0.995, "Included / eligible", transform=ax.transAxes,
+                fontsize=8, color="0.35", ha="left", va="top")
 
     all_v: list[float] = []
 
     def _plot_rows(rows: list[dict[str, object]], y_values: np.ndarray) -> None:
         for row, y in zip(rows, y_values):
+            if show_coverage:
+                coverage = []
+                for table in coverage_tables:
+                    if row["metric"] in table.index:
+                        entry = table.loc[row["metric"]]
+                        n, eligible = int(entry.n_tested), int(entry.n_eligible)
+                        coverage.append(f"{n}/{eligible}")
+                label = coverage[0] if len(set(coverage)) == 1 else " / ".join(coverage)
+                ax.text(1.03, y, label, transform=ax.get_yaxis_transform(),
+                        va="center", fontsize=8, color="0.35")
             vl = float(row["loc_v"]) if np.isfinite(row["loc_v"]) else np.nan
             va = float(row["arch_v"]) if np.isfinite(row["arch_v"]) else np.nan
             loc_fdr = float(row["loc_fdr"]) if np.isfinite(row["loc_fdr"]) else np.nan
@@ -1174,7 +1155,7 @@ def plot_combined_association_dumbbell(
 
     if arch_group:
         ax.text(
-            -0.22,
+            -0.64,
             float(np.mean(arch_y)),
             "Archetype higher",
             transform=ax.get_yaxis_transform(),
@@ -1187,7 +1168,7 @@ def plot_combined_association_dumbbell(
         )
     if loc_group:
         ax.text(
-            -0.22,
+            -0.64,
             float(np.mean(loc_y)),
             "Location higher",
             transform=ax.get_yaxis_transform(),
@@ -1205,8 +1186,8 @@ def plot_combined_association_dumbbell(
 
     y_ticks = list(arch_y) + list(loc_y)
     y_labels = (
-        [ASSOCIATION_DUMBBELL_SHORT_LABELS.get(str(r["metric"]), str(r["metric"])) for r in arch_group]
-        + [ASSOCIATION_DUMBBELL_SHORT_LABELS.get(str(r["metric"]), str(r["metric"])) for r in loc_group]
+        [ASSOCIATION_DUMBBELL_ROW_LABELS.get(str(r["metric"]), str(r["metric"])) for r in arch_group]
+        + [ASSOCIATION_DUMBBELL_ROW_LABELS.get(str(r["metric"]), str(r["metric"])) for r in loc_group]
     )
 
     xmax = float(np.nanmax(all_v)) if all_v else 0.5
@@ -1232,7 +1213,10 @@ def plot_combined_association_dumbbell(
         ),
     ]
     ax.legend(handles=legend_handles, loc="lower right", fontsize=7.5, framealpha=0.95)
-    fig.subplots_adjust(left=0.36)
+    fig.subplots_adjust(left=0.38, right=0.83, bottom=0.15)
+    fig.text(0.38, 0.025, "Excluded: remainder categories and missing/unassigned calls.\n"
+             "EcoTyper uses confident calls; counts show included / assay-eligible cases.",
+             fontsize=7.5, color="0.35", ha="left", va="bottom")
     _save_show_close(fig, out_svg, show=show)
     return out_svg
 
@@ -1253,7 +1237,6 @@ def compute_classifier_pairwise_associations(
     columns: list[tuple[str, str]] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Pairwise Cramér's V between patient-level classifiers (complete cases per pair)."""
-    df = _genomic_classifier_cohort(df)
     pairs = columns or CLASSIFIER_PAIRWISE_COLUMNS
     present = [(col, label) for col, label in pairs if col in df.columns]
     labels = [label for _, label in present]
@@ -1261,8 +1244,9 @@ def compute_classifier_pairwise_associations(
     records: list[dict] = []
     for i, (col_a, label_a) in enumerate(present):
         for col_b, label_b in present[i + 1 :]:
-            series_a = _prepare_classifier_series(df[col_a], label_a)
-            series_b = _prepare_classifier_series(df[col_b], label_b)
+            pair_df = _classifier_source_cohort(_classifier_source_cohort(df, col_a), col_b)
+            series_a = _prepare_classifier_series(pair_df[col_a], label_a)
+            series_b = _prepare_classifier_series(pair_df[col_b], label_b)
             series_a = _mask_nonspecific_classifier_levels(series_a)
             series_b = _mask_nonspecific_classifier_levels(series_b)
             valid = series_a.notna() & series_b.notna()
@@ -1278,6 +1262,7 @@ def compute_classifier_pairwise_associations(
                     "classifier_a": label_a,
                     "classifier_b": label_b,
                     "n": int(valid.sum()),
+                    "n_eligible": len(pair_df),
                     "Cramer_V": cramer_v,
                     "p_value": p_value,
                 }
@@ -1360,92 +1345,56 @@ def run_association_analysis(
     pairwise_csv: str,
     barchart_svg: Path | None = None,
     barchart_title: str = "",
+    n_resamples: int = 99999,
+    random_seed: int = 20261025,
 ) -> pd.DataFrame:
-    """Global + pairwise association tests vs Location or archetype (spatial protein)."""
-    df = _genomic_classifier_cohort(df)
+    """Global association on dotplot inputs, with fixed-margin Monte Carlo p-values.
+
+    The legacy pairwise-group export below retains its separate >5-case filter.
+    """
     strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
     for metric in metrics:
-        metric_label = display_names[metric]
+        metric_df = _classifier_source_cohort(df, metric)
+        # Exactly the enrichment population: observed levels, author exclusions,
+        # confident EcoTyper calls. Rare subtypes are retained; Other is excluded.
         class_series = _prepare_classifier_series(
-            df[metric], metric_label, strat_series=df[strat_col]
+            metric_df[metric], display_names[metric], strat_series=metric_df[strat_col],
+            min_level_n=MIN_CLASSIFIER_LEVEL_N_ENRICHMENT,
         )
-        class_series = _mask_nonspecific_classifier_levels(class_series)
         valid = class_series.notna()
+        n_eligible = int(metric_df[strat_col].notna().sum())
         n_tested = int(valid.sum())
-        n_levels = int(class_series[valid].nunique()) if n_tested else 0
-        if n_tested == 0 or n_levels < 2:
-            results.append(
-                {
-                    "Metric": display_names[metric],
-                    "Test_Type": "NA",
-                    "Chi2_or_OR": None,
-                    "p_value": float("nan"),
-                    "Cramer_V": None,
-                    "Effect_Size": "NA",
-                    "n_tested": n_tested,
-                    "n_levels": n_levels,
-                }
-            )
-            continue
-        contingency_test = pd.crosstab(
-            class_series[valid],
-            df.loc[valid, strat_col].astype(str),
+        table = pd.crosstab(class_series[valid], metric_df.loc[valid, strat_col].astype(str))
+        record = dict(
+            Metric=display_names[metric], Test_Type="NA", Chi2_or_OR=np.nan,
+            p_value=np.nan, Cramer_V=np.nan, Effect_Size="NA",
+            n_tested=n_tested, n_eligible=n_eligible,
+            n_cohort=int(df[strat_col].notna().sum()),
+            assignment_coverage=n_tested/n_eligible if n_eligible else np.nan,
+            n_levels=table.shape[0], n_strata=table.shape[1],
+            min_expected=np.nan, expected_cells_below5=np.nan,
+            n_resamples=0, random_seed=random_seed,
         )
-        contingency_test = _drop_nonspecific_crosstab_levels(contingency_test)
-        if contingency_test.shape[0] < 2 or contingency_test.shape[1] < 2:
-            results.append(
-                {
-                    "Metric": display_names[metric],
-                    "Test_Type": "NA",
-                    "Chi2_or_OR": None,
-                    "p_value": float("nan"),
-                    "Cramer_V": None,
-                    "Effect_Size": "NA",
-                    "n_tested": n_tested,
-                    "n_levels": n_levels,
-                }
+        if min(table.shape) >= 2:
+            test = chi2_contingency(
+                table, correction=False,
+                method=MonteCarloMethod(n_resamples=n_resamples, batch=2000,
+                                       rng=np.random.default_rng(random_seed)),
             )
-            continue
-        if contingency_test.empty or contingency_test.size == 0:
-            results.append(
-                {
-                    "Metric": display_names[metric],
-                    "Test_Type": "NA",
-                    "Chi2_or_OR": None,
-                    "p_value": float("nan"),
-                    "Cramer_V": None,
-                    "Effect_Size": "NA",
-                    "n_tested": n_tested,
-                    "n_levels": n_levels,
-                }
+            v = float(np.sqrt(test.statistic/(n_tested*(min(table.shape)-1))))
+            record.update(
+                Test_Type="Chi-square (Monte Carlo)", Chi2_or_OR=float(test.statistic),
+                p_value=float(test.pvalue), Cramer_V=v,
+                Effect_Size="Negligible" if v < .1 else "Small" if v < .3 else "Medium" if v < .5 else "Large",
+                min_expected=float(test.expected_freq.min()),
+                expected_cells_below5=int((test.expected_freq < 5).sum()),
+                n_resamples=n_resamples,
             )
-            continue
-        test_type, p_value, chi2_or_or, cramer_v = _global_association_test(contingency_test)
-        effect = (
-            "Negligible"
-            if cramer_v < 0.1
-            else "Small"
-            if cramer_v < 0.3
-            else "Medium"
-            if cramer_v < 0.5
-            else "Large"
-        )
-        results.append(
-            {
-                "Metric": display_names[metric],
-                "Test_Type": test_type,
-                "Chi2_or_OR": chi2_or_or,
-                "p_value": p_value,
-                "Cramer_V": cramer_v,
-                "Effect_Size": effect,
-                "n_tested": n_tested,
-                "n_levels": n_levels,
-            }
-        )
+        results.append(record)
 
     results_df = pd.DataFrame(results)
     results_df["FDR"] = benjamini_hochberg(results_df["p_value"].values)
@@ -1463,20 +1412,22 @@ def run_association_analysis(
         else []
     )
     for metric in metrics:
+        metric_df = _classifier_source_cohort(df, metric)
         metric_label = display_names[metric]
         class_series = _prepare_classifier_series(
-            df[metric], metric_label, strat_series=df[strat_col]
+            metric_df[metric], metric_label, strat_series=metric_df[strat_col]
         )
         class_series = _mask_nonspecific_classifier_levels(class_series)
         valid = class_series.notna()
         contingency = pd.crosstab(
             class_series[valid],
-            df.loc[valid, strat_col].astype(str),
+            metric_df.loc[valid, strat_col].astype(str),
         )
         contingency = _drop_nonspecific_crosstab_levels(contingency)
         metric_values = [v for v in contingency.index.tolist() if not _is_nonspecific_classifier_level(v)]
-        for i, g1 in enumerate(groups):
-            for g2 in groups[i + 1 :]:
+        metric_groups = [g for g in groups if g in contingency.columns]
+        for i, g1 in enumerate(metric_groups):
+            for g2 in metric_groups[i + 1 :]:
                 for metric_val in metric_values:
                     if metric_val not in contingency.index:
                         continue
@@ -1551,15 +1502,9 @@ def _drop_nonspecific_crosstab_levels(table: pd.DataFrame) -> pd.DataFrame:
 # Global association barchart: require at least this Cramér's V to highlight FDR significance.
 CRAMER_V_HIGHLIGHT_MIN = 0.15
 
-# Drop classifier levels with fewer than this many patients before global chi-square tests
-# (Fig 4B association bars / pairwise). Enrichment dotplots (Fig 4C/D) keep all levels
-# except explicit excludes — see ``compute_group_enrichment_table``.
-MIN_CLASSIFIER_LEVEL_N = 10
-
-# Sparse subtype pooling (Lymphgen has many low-count classes in n=61 discovery cohort).
-MIN_CLASSIFIER_LEVEL_N_BY_METRIC: dict[str, int] = {
-    "Wright 2020 Lymphgen": 5,
-}
+# Separate classifier-pair heatmaps and legacy group-pair tables retain the
+# >5-case filter. Global dumbbells follow the enrichment population instead.
+MIN_CLASSIFIER_LEVEL_N = 6
 
 # Enrichment dotplots: keep rare levels (n≥1). Explicit METRIC_FEATURE_EXCLUDE / skip
 # labels (Other, unknown, …) are still masked.
@@ -1598,7 +1543,7 @@ _STEEN_ECOTYPE_LEVELS = [f"LE{i}" for i in range(1, 10)]
 
 METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     HLA_CLASS_STATE_DISPLAY: HLA_CLASS_STATE_ORDER,
-    "Cell of Origin": ["ABC", "Intermediate", "GCB"],
+    "Cell of Origin": ["ABC", "UNC", "Intermediate", "GCB"],
     "Chapuy 2025 DLBclass": ["C1", "C2", "C3", "C4", "C5"],
     "Ciavarella 2018 Cluster": ["Cold", "Intermediate", "Hot"],
     "Kotlov 2021 LME": ["Depleted", "Inflammatory", "Mesenchymal", "GC-like"],
@@ -1607,14 +1552,20 @@ METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     "Steen 2021 EcoTyper (confident)": _STEEN_ECOTYPE_LEVELS,
     "Steen 2021 EcoTyper (best match)": _STEEN_ECOTYPE_LEVELS,
     "Wright 2020 Lymphgen": ["MCD", "BN2", "BN2/MCD", "ST2", "EZB", "N1", "Other"],
-    "Lacy 2020 HMRN": ["C1", "C2", "C3", "C4", "C5", "C6"],
+    "Lacy 2020 HMRN": ["NEC", "SOCS1/SGK1", "TET2/SGK1", "MYD88", "BCL2", "NOTCH2"],
     "Shen 2023 LymphPlex": ["MCD", "BN2", "EZB", "ST2", "N1", "TP53"],
     "Li 2025 LymphoMAP": ["FMAC", "TEX", "LN"],
     "Tumor Location": ["PCNS", "bone", "nodal", "testis"],
 }
 
+# Remainder outputs stay in composition plots and the assay-eligible denominator,
+# but are excluded consistently from association tests. Intermediate is a remainder
+# only for COO; the Ciavarella middle class is a biological subtype and is retained.
 METRIC_FEATURE_EXCLUDE: dict[str, tuple[str, ...]] = {
-    "Chapuy 2025 DLBclass": ("0",),
+    "Wright 2020 Lymphgen": ("Other", "Others"),
+    "Chapuy 2025 DLBclass": ("0", "Unclassified"),
+    "Lacy 2020 HMRN": ("NEC",),
+    "Cell of Origin": ("UNC", "Unclassified", "Intermediate"),
     "Shen 2023 LymphPlex": ("Others", "Other"),
 }
 
@@ -1656,7 +1607,7 @@ def _prepare_classifier_series(
 ) -> pd.Series:
     """Mask excluded / missing classifier levels before crosstabs."""
     if min_level_n is None:
-        min_level_n = MIN_CLASSIFIER_LEVEL_N_BY_METRIC.get(metric_label, MIN_CLASSIFIER_LEVEL_N)
+        min_level_n = MIN_CLASSIFIER_LEVEL_N
     out = series.astype(str).str.strip()
     exclude = {x.lower() for x in METRIC_FEATURE_EXCLUDE.get(metric_label, ())}
     exclude |= _SKIP_FEATURE_VALUES
@@ -1705,11 +1656,10 @@ def compute_group_enrichment_table(
 
     FDR is Benjamini–Hochberg **within each classifier** (not across the full dotplot).
 
-    Unlike global association tests (Fig 4B), rare classifier levels are kept by default
+    As in global association tests (Fig 4B), rare classifier levels are kept by default
     (``min_level_n=1``) so every observed subtype appears as a row in Fig 4C/4D.
     Catch-all labels in ``METRIC_FEATURE_EXCLUDE`` / ``_SKIP_FEATURE_VALUES`` are still omitted.
     """
-    df = _genomic_classifier_cohort(df)
     strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
     metrics, display_names = _association_metrics(df, stratifier=stratifier)
 
@@ -1717,15 +1667,16 @@ def compute_group_enrichment_table(
     rows: list[dict] = []
 
     for metric in metrics:
+        metric_df = _classifier_source_cohort(df, metric)
         metric_label = display_names[metric]
         metric_series = _prepare_classifier_series(
-            df[metric],
+            metric_df[metric],
             metric_label,
-            strat_series=df[strat_col],
+            strat_series=metric_df[strat_col],
             min_level_n=min_level_n,
         )
         valid = metric_series.notna()
-        strat_valid = df.loc[valid, strat_col].astype(str)
+        strat_valid = metric_df.loc[valid, strat_col].astype(str)
         for metric_val in metric_series.loc[valid].unique():
             val = str(metric_val).strip()
 
@@ -1850,10 +1801,12 @@ def plot_association_enrichment_dotplot_by_classifier(
     height_ratios = []
 
     for metric in metric_order:
-        feats = _order_metric_features(
-            metric,
-            enrichment.loc[enrichment["Metric"] == metric, "Feature"].unique().tolist(),
-        )
+        features = enrichment.loc[enrichment["Metric"] == metric, "Feature"].unique().tolist()
+        # Keep the published GC-like subtype visible even when no cases map to it.
+        # This adds a display row only; no synthetic enrichment tests enter the FDR.
+        if metric == "Kotlov 2021 LME" and "GC-like" not in features:
+            features.append("GC-like")
+        feats = _order_metric_features(metric, features)
         metric_feature_order[metric] = feats
         height_ratios.append(max(1, len(feats)))
 
@@ -1989,8 +1942,20 @@ def plot_association_enrichment_dotplot_by_classifier(
                 zorder=2,
             )
 
+        if metric == "Kotlov 2021 LME" and "GC-like" in feats:
+            cohort = _classifier_source_cohort(df, "KotlovSig")
+            strat_col = "Location" if stratifier == "location" else "tumorimmune_archetype"
+            gc_cases = cohort["KotlovSig"].astype(str).str.strip().eq("GC-like") & cohort[strat_col].notna()
+            if not gc_cases.any():
+                # Visual placeholders only: absent GC-like has no OR, p-value or FDR.
+                ax.scatter(
+                    [group_x[g] for g in groups], [feats.index("GC-like")] * len(groups),
+                    s=dummy_dot, color="0.82", edgecolors="0.65",
+                    linewidths=0.45, alpha=0.9, zorder=1,
+                )
+
         ax.set_yticks(range(len(feats)))
-        ax.set_yticklabels(feats, fontsize=9)
+        ax.set_yticklabels([classifier_display_label(metric, f) for f in feats], fontsize=9)
 
         ax.set_ylim(len(feats) - 0.5, -0.5)
         ax.set_xlim(-0.35 * x_spacing, x_max + 0.35 * x_spacing)
@@ -2123,9 +2088,9 @@ def _format_group_label(group: str) -> str:
     if g == "testis":
         return "Testis"
     if g == "cytotoxic predominant":
-        return "Cytotoxic"
+        return "Cytotoxic\npredominant"
     if g == "low immune":
-        return "Low immune"
+        return "Low\nimmune"
     if g == "complex immune":
-        return "Complex immune"
+        return "Diverse\nimmune"
     return g

@@ -333,6 +333,14 @@ def build_validation_cohort_uns(
             )
         if "ecotyper_b_state" in uns:
             uns["ecotyper_b_state"] = _h5ad_safe_dataframe(uns["ecotyper_b_state"])
+    if "predictions" in uns and "case_classification_validation" not in uns:
+        from .validation_classifications import build_case_classification_validation
+        uns["case_classification_validation"] = _h5ad_safe_dataframe(
+            build_case_classification_validation(uns["predictions"], pd.DataFrame())
+        )
+    if "case_classification_validation" in uns:
+        from .case_assignments import clean_validation_assignment_storage
+        uns = clean_validation_assignment_storage(uns)
     return uns
 
 
@@ -359,13 +367,11 @@ def cohort_notebook_inputs(adata) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series
     gep.index = gep.index.astype(str)
     gep.columns = gep.columns.astype(str)
 
-    if "predictions" not in vc:
-        raise KeyError(
-            f"adata.uns['{VALIDATION_COHORT_UNS_KEY}'] is missing 'predictions'. "
-            "Re-run inject_validation_cohort.py with a trained nb5 model bundle."
-        )
-    pred = _as_dataframe(vc["predictions"], index_col="patient_alias")
-    pred.index = pred.index.astype(str)
+    from .case_assignments import validation_analysis_frame
+
+    # Match expression-column order to keep existing resampling order reproducible.
+    pred = validation_analysis_frame(vc).reindex(gep.columns)
+    pred.index.name = "patient_alias"
     labels = pred["pred_tumorimmune_archetype"].astype(str)
     return pred, gep, labels
 

@@ -7,6 +7,8 @@ after filtering are omitted automatically.
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -754,9 +756,12 @@ def run_lrt_partition_and_risk_grid(surv: pd.DataFrame, out_dir: Path, *, show: 
     ax_lrt.set_title(f"Symmetric LRTs — {ENDPOINT} (validation, events={n_events}/{len(full_df)})", fontsize=10)
     fig_lrt.tight_layout()
     lrt_stem = out_dir / "cox_location_archetype_symmetric_lrt_OS"
+    finalize_figure_labels(fig_lrt)
     fig_lrt.savefig(lrt_stem.with_suffix(".svg"), bbox_inches="tight")
+    finalize_figure_labels(fig_lrt)
     fig_lrt.savefig(lrt_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig_lrt)
         plt.show(fig_lrt)
     plt.close(fig_lrt)
 
@@ -783,9 +788,12 @@ def run_lrt_partition_and_risk_grid(surv: pd.DataFrame, out_dir: Path, *, show: 
     fig_p.suptitle("Prognostic information partition — Location vs Archetype (validation)", y=1.12, fontsize=11)
     fig_p.tight_layout()
     part_stem = out_dir / "cox_loglikelihood_partition"
+    finalize_figure_labels(fig_p)
     fig_p.savefig(part_stem.with_suffix(".svg"), bbox_inches="tight")
+    finalize_figure_labels(fig_p)
     fig_p.savefig(part_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig_p)
         plt.show(fig_p)
     plt.close(fig_p)
 
@@ -845,9 +853,12 @@ def run_lrt_partition_and_risk_grid(surv: pd.DataFrame, out_dir: Path, *, show: 
     )
     fig_g.tight_layout()
     grid_stem = out_dir / "location_archetype_event_rate_grid"
+    finalize_figure_labels(fig_g)
     fig_g.savefig(grid_stem.with_suffix(".svg"), bbox_inches="tight")
+    finalize_figure_labels(fig_g)
     fig_g.savefig(grid_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig_g)
         plt.show(fig_g)
     plt.close(fig_g)
 

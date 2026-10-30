@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 from pathlib import Path
 
 import numpy as np
@@ -363,18 +365,7 @@ def _discovery_metadata(adata, paths: NotebookPaths | None, patient_subset: list
     meta = meta.drop_duplicates("patient_id").set_index("patient_id")
 
     if "tumorimmune_archetype" not in meta.columns and "tumorimmune_archetype_id" not in meta.columns:
-        if paths is None:
-            raise KeyError(
-                "Discovery metadata lacks tumorimmune_archetype / tumorimmune_archetype_id; pass paths with "
-                "data/processed/tumorimmune_archetype_assignments.csv available."
-            )
-        arch = load_archetype_assignments(paths)
-        arch = arch.copy()
-        arch["patient_id"] = arch["patient_id"].astype(str)
-        meta = meta.join(
-            arch.set_index("patient_id")[["tumorimmune_archetype_id", "tumorimmune_archetype"]],
-            how="left",
-        )
+        raise KeyError("Canonical case_classifications lacks immune archetype assignments")
 
     if "tumorimmune_archetype" in meta.columns:
         meta["Archetype"] = meta["tumorimmune_archetype"].map(canonical_archetype)
@@ -997,9 +988,12 @@ def plot_hla_status_volcanoes(
         safe_arch = "overall" if archetype == "overall" else arch_short
         stem = f"volcano_{hla_col}_{safe_arch}_loss_vs_retained{suffix}"
         svg = out / f"{stem}.svg"
+        finalize_figure_labels(fig)
         fig.savefig(svg, bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(out / f"{stem}.png", dpi=300, bbox_inches="tight")
         if show:
+            finalize_figure_labels(fig)
             plt.show(fig)
         plt.close(fig)
         written.append(svg)
@@ -1092,9 +1086,12 @@ def plot_hla_class_group_volcanoes(
 
         stem = f"volcano_{short}_vs_rest{suffix}"
         svg = out / f"{stem}.svg"
+        finalize_figure_labels(fig)
         fig.savefig(svg, bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(out / f"{stem}.png", dpi=300, bbox_inches="tight")
         if show:
+            finalize_figure_labels(fig)
             plt.show(fig)
         plt.close(fig)
         written.append(svg)
@@ -1315,9 +1312,12 @@ def plot_hla_class_group_density_heatmap(
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
     cbar.set_label("Row z-score of median cells/mm2")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -1423,9 +1423,12 @@ def _plot_hla_class_group_dotplot(
         borderaxespad=0.0,
     )
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -1630,9 +1633,12 @@ def plot_hla_class_group_program_heatmap(
         grey_label = f"{significance_label} >= {significance_th:g}"
     cbar.set_label(f"{value_label} (grey: {grey_label})")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -1830,9 +1836,12 @@ def plot_hla_class_group_boxplots(
         ax.axis("off")
     fig.suptitle(suptitle, fontsize=14, y=1.01)
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -1917,9 +1926,12 @@ def plot_one_vs_rest_volcanoes(
 
         stem = f"volcano_{short}_vs_rest_location_adjusted"
         svg = out / f"{stem}.svg"
+        finalize_figure_labels(fig)
         fig.savefig(svg, bbox_inches="tight")
+        finalize_figure_labels(fig)
         fig.savefig(out / f"{stem}.png", dpi=300, bbox_inches="tight")
         if show:
+            finalize_figure_labels(fig)
             plt.show(fig)
         plt.close(fig)
         written.append(svg)
@@ -2020,9 +2032,12 @@ def plot_within_location_volcanoes(
             safe_location = str(location).replace(" ", "_")
             stem = f"volcano_{safe_location}_{short}_vs_rest{suffix}"
             svg = out / f"{stem}.svg"
+            finalize_figure_labels(fig)
             fig.savefig(svg, bbox_inches="tight")
+            finalize_figure_labels(fig)
             fig.savefig(out / f"{stem}.png", dpi=300, bbox_inches="tight")
             if show:
+                finalize_figure_labels(fig)
                 plt.show(fig)
             plt.close(fig)
             written.append(svg)
@@ -2153,9 +2168,12 @@ def plot_cp_top_gene_location_heatmap(
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
     cbar.set_label("Cohort-adjusted coefficient")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -2543,9 +2561,12 @@ def plot_archetype_location_variance_heatmap(
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
     cbar.set_label("Cohort-adjusted coefficient (grey: FDR >= 0.05)")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -2599,9 +2620,12 @@ def plot_standardized_effect_variance_heatmap(
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
     cbar.set_label(f"Hedges g (grey: {significance_label} >= {significance_th:g})")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -2967,9 +2991,12 @@ def plot_program_score_mean_heatmaps_by_location(
     if last_im is not None:
         cbar = fig.colorbar(last_im, ax=axes.tolist(), fraction=0.025, pad=0.02)
         cbar.set_label("Mean mini-program score")
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -3109,9 +3136,12 @@ def plot_program_score_boxplots(
     fig.supylabel("Mini-program score (mean z-scored expression)", x=0.01, fontsize=10)
     fig.suptitle("Mini-program scores by anatomical site and archetype", y=0.995)
     fig.tight_layout(rect=(0.06, 0.0, 1.0, 0.98))
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -3162,9 +3192,12 @@ def plot_program_effect_heatmap(
     cbar = fig.colorbar(im, ax=ax, fraction=0.025, pad=0.02)
     cbar.set_label(f"Hedges g (grey: {significance_label} >= {significance_th:g})")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out
@@ -3230,9 +3263,12 @@ def plot_combined_standardized_effect_gene_heatmap(
     cbar = fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
     cbar.set_label("Hedges g (grey: FDR >= 0.05)")
     fig.tight_layout()
+    finalize_figure_labels(fig)
     fig.savefig(out, bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
+        finalize_figure_labels(fig)
         plt.show(fig)
     plt.close(fig)
     return out

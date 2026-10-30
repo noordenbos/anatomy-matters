@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import classifier_display_label, finalize_figure_labels
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -148,7 +150,7 @@ def build_table_layout(
                 kind="data",
                 y=y,
                 group=group,
-                label=level_only_label(record.get("label", "")),
+                label=classifier_display_label(group, level_only_label(record.get("label", ""))),
                 n_text=n_text,
                 hr=float(record.get("HR", np.nan)),
                 ci_lower=float(record.get("CI_lower", np.nan)),
@@ -390,10 +392,13 @@ def save_cox_forest_table(
         log_x=log_x,
         show_fdr=show_fdr,
     )
+    finalize_figure_labels(fig)
     fig.savefig(out_stem.with_suffix(".svg"), bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
     return plot_df
 
@@ -689,10 +694,13 @@ def save_cohort_hr_forest(
         font_title=font_title,
         font_subtitle=font_subtitle,
     )
+    finalize_figure_labels(fig)
     fig.savefig(out_stem.with_suffix(".svg"), bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
     return export_df
 
@@ -908,9 +916,12 @@ def save_location_archetype_vs_di_forest(
         location_order=location_order,
         title=title,
     )
+    finalize_figure_labels(fig)
     fig.savefig(out_stem.with_suffix(".svg"), bbox_inches="tight")
+    finalize_figure_labels(fig)
     fig.savefig(out_stem.with_suffix(".png"), dpi=300, bbox_inches="tight")
     if show:
-        plt.show(fig)
+        finalize_figure_labels(fig)
+        plt.show()
     plt.close(fig)
     return plot_df

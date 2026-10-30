@@ -1,0 +1,40 @@
+{
+  "reference_data_sha256": "7781a9b8acf39ffebeb44246ada3a8cd30c066c78528783cce1a86a9d46b69f7",
+  "model_sha256": "11695cf93ec5b7aaf52218351b8b1974d3e0a470e37fe61d18b094d280b7c1d5",
+  "nrep": 1000,
+  "k": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "RNGversion": "3.5.3",
+  "seed": 17,
+  "selection": "AIC",
+  "reference_counts": {
+    "BCL2": 176,
+    "TET2/SGK1": 98,
+    "SOCS1/SGK1": 111,
+    "NOTCH2": 143,
+    "MYD88": 152,
+    "NEC": 248
+  },
+  "labels": {
+    "reference_C1": "BCL2",
+    "reference_C2": "TET2/SGK1",
+    "reference_C3": "SOCS1/SGK1",
+    "reference_C4": "NOTCH2",
+    "reference_C5": "MYD88",
+    "reference_C6": "NEC"
+  },
+  "label_evidence": "Reference feature profiles and cohort counts reproduce paper subtypes; raw component IDs are not manuscript C1-C6 aliases.",
+  "reference_url": "https://github.com/ecsg-uoy/DLBCLGenomicSubtyping",
+  "supplement_url": "https://api.repository.cam.ac.uk/server/api/core/bitstreams/8ecf06ef-3ab8-4356-8775-f6e7522cabcf/content",
+  "missing_data": "Marginalize unobserved Bernoulli features; declared research extension of the complete-feature author predictor."
+}

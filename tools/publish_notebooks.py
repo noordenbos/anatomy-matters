@@ -97,6 +97,7 @@ PRIVATE_PATH_PATTERNS = (
     re.compile(re.escape(str(REPO_ROOT.resolve()))),
     re.compile(r"/Users/[^/\s\"']+/code/DLBCL_location_2026"),
     re.compile(r"/Users/[^/\s\"']+/"),
+    re.compile(r"/opt/homebrew/"),
 )
 
 
@@ -186,6 +187,8 @@ def patch_notebook_source(src: str) -> str:
 def sanitize_text(text: str) -> str:
     if not text:
         return text
+    text = text.replace("/opt/homebrew/", "<R-install>/")
+    text = text.replace("provisional per user", "provisional BLYMFv2 assignment")
     root = str(REPO_ROOT.resolve())
     text = text.replace(root, ".")
     text = re.sub(r"/Users/[^/\s\"']+/code/DLBCL_location_2026", ".", text)
@@ -258,10 +261,7 @@ def contains_private_paths(text: str) -> bool:
 
 
 def _figure_notebook_paths() -> list[Path]:
-    names = sorted(NOTEBOOKS_DIR.glob("fig*.ipynb")) + sorted(
-        NOTEBOOKS_DIR.glob("supplemental_fig*.ipynb")
-    )
-    return names
+    return sorted(NOTEBOOKS_DIR.glob("*.ipynb"))
 
 
 def process_notebooks(*, check_only: bool = False) -> int:

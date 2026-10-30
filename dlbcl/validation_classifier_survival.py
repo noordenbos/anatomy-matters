@@ -291,7 +291,10 @@ def _analysis_cohort(
     if benchmark_mode:
         clf = _prepare_benchmark_classifier_series(work[spec.column])
     else:
-        clf = _prepare_classifier_series(work[spec.column], spec.label)
+        # Survival eligibility is independent of the global association-plot cutoff.
+        # Preserve the existing survival cohorts when association filtering changes.
+        survival_min_n = 5 if spec.label == "Wright 2020 Lymphgen" else 10
+        clf = _prepare_classifier_series(work[spec.column], spec.label, min_level_n=survival_min_n)
     work["classifier"] = _classifier_categorical(clf, spec.label, spec.reference)
 
     keep_cols = [TIME_COL, EVENT_COL, *baseline, "classifier"]

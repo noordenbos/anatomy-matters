@@ -1,0 +1,17 @@
+{
+  "method": "Maximum Pearson correlation across 25 signature features; each query cluster assigned independently",
+  "references": "Published Kotlov labels for Schmitz 480, Morin 175 and Li 142 tumor profiles; RNA-seq only; panel-restricted signatures",
+  "scaling": "Author median scaling per cohort; mean signature profile per published subtype, then equal-weight mean across three cohorts",
+  "query_labels_used": false,
+  "one_to_one_constraint": false,
+  "limitation": "Exploratory biological annotation of reconstructed partitions, not the author KNN model. No GC-like cluster is recovered. Discovery C1 and Validation C2 are weaker depleted-profile matches.",
+  "sensitivity": "All discovery mappings agree across individual references. Validation C3 is mesenchymal in Schmitz/Li and GC-like in Morin; the pooled centroid favors mesenchymal.",
+  "sources": {
+    "resource:full_reference_partition_pairs.csv": "5bb4feddd0b9226ac2786809ec9b9a68e77bba81b713d43682d46ce65d41b444",
+    "resource:Schmitz_BLYM777_scaled_scores.csv": "da4b7372bb713e66ac6cc421bb46c309bb37854abb615646f5a165521cbef615",
+    "resource:Morin_BLYM777_scaled_scores.csv": "5a49e1b413ed0badc9edd7c003320ae2a4ec840346c921357185ce431a228e89",
+    "resource:Li_BLYM777_scaled_scores.csv": "e34135fc11c63aa14d1f22385433f365be2a43cf7bb7c7d4f84eab4651af527f",
+    "resource:Discovery_kotlov_signature_scores.csv": "653b03eceec5416fbfe67df8e4e51164ee83cb62f3f934ac436fdeb878d15536",
+    "resource:Validation_kotlov_signature_scores.csv": "c027f627f72f2f79f41f39dafedfab5340f4c276bf285722a58a592a9d851309"
+  }
+}

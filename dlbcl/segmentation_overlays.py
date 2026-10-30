@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .display_labels import finalize_figure_labels
+
 from pathlib import Path
 
 import matplotlib.colors as mcolors
@@ -129,7 +131,9 @@ def spatial_segment_full_mask_and_borders(
 
     if save_dir is not None and fov is not None:
         base = save_dir / f"{fov}_{phenotype_key}_borders_no_axes"
+        finalize_figure_labels(fig_borders)
         fig_borders.savefig(base.with_suffix(".pdf"), format="pdf", bbox_inches="tight", pad_inches=0)
+        finalize_figure_labels(fig_borders)
         fig_borders.savefig(base.with_suffix(".png"), format="png", dpi=dpi, bbox_inches="tight", pad_inches=0)
 
     plt.close(fig_borders)
@@ -143,7 +147,9 @@ def spatial_segment_full_mask_and_borders(
 
     if save_dir is not None and fov is not None:
         base = save_dir / f"{fov}_{phenotype_key}_full_mask_no_axes"
+        finalize_figure_labels(fig_filled)
         fig_filled.savefig(base.with_suffix(".pdf"), format="pdf", bbox_inches="tight", pad_inches=0)
+        finalize_figure_labels(fig_filled)
         fig_filled.savefig(base.with_suffix(".png"), format="png", dpi=dpi, bbox_inches="tight", pad_inches=0)
 
     plt.close(fig_filled)
