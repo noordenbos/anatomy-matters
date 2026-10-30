@@ -2,6 +2,8 @@
 
 ## 1.1.0 — release candidate
 
+- Exclude unavailable and unclassified DLBclass calls before fitting S4F OS/DSS Cox models; preserve other covariate models and refresh forest plots and supplementary statistics.
+
 - Consolidate discovery and validation calls into two authoritative AnnData tables.
 - Use native LymphPlex PAM missing-value handling to resolve 17 discovery and 84 validation calls; retain coverage and completion sensitivity separately, without changing previously assigned labels or other classifiers.
 - Include the verified genomic and GEP reclassification, panel-specific input handling, biological HMRN labels, and explicit missing-input abstention. Unsupported discovery genomic calls are unknown.
@@ -25,4 +27,4 @@
 
 Validation panel assignments and discovery raw-normalization provenance retain the qualifications documented in the README. This release does not introduce measured CN data or convert research reconstructions into validated clinical assays.
 
-All 16 notebooks executed successfully in a clean environment; 81 automated checks passed. Fresh classifier calls match the supplied assignments. The publication date and fixed Zenodo record will be added after the data upload.
+All 16 notebooks executed successfully in a clean environment; 82 automated checks passed. Fresh classifier calls match the supplied assignments. The publication date and fixed Zenodo record will be added after the data upload.
