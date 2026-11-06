@@ -73,12 +73,16 @@ SECTION_HEADER_ROWS = {
 # Discovery anatomy_matters table uses legacy row labels; map to validation canonical labels.
 CHARACTERISTIC_LABEL_ALIASES: dict[str, str] = {
     "IPI/IELSG-score:": "IPI/MSKCC-score:",
+    "  Intermediate": "  Unclassified (UNC)",
+    "  UNC": "  Unclassified (UNC)",
+    "  Unclassified": "  Unclassified (UNC)",
     "  RCHOP like": "  RCHOP-like",
     "  R-CHOP-like": "  RCHOP-like",
     "  R-CHOP-like (w/o RT)": "  RCHOP-like",
 }
 
-COO_LEVELS = ["ABC", "GCB", "Intermediate"]
+COO_LEVELS = ["ABC", "GCB", "UNC"]
+COO_UNCLASSIFIED_ROW = "  Unclassified (UNC)"
 
 DISCOVERY_COLUMN_PREFIX = "d"
 VALIDATION_COLUMN_PREFIX = "v"
@@ -118,6 +122,7 @@ class GroupStats:
     treatment_unknown: int = 0
     coo_ABC: str = "0"
     coo_GCB: str = "0"
+    # Legacy attribute name; includes UNC and its historical label aliases.
     coo_Intermediate: str = "0"
     myc_bcl2: str = "0"
     ish_MYC: str = "0 (n = 0)"
@@ -324,11 +329,22 @@ def enrich_with_coo_nanostring(
     return out
 
 
+def normalize_coo_label(value: object) -> str | None:
+    """Keep a valid UNC result distinct from an unavailable COO result."""
+    if pd.isna(value) or _is_missing(value):
+        return None
+    label = str(value).strip().upper()
+    aliases = {
+        "ABC": "ABC", "GCB": "GCB", "UNC": "UNC",
+        "INTERMEDIATE": "UNC", "UNCLASSIFIED": "UNC", "UNCLASSIFIED (UNC)": "UNC",
+    }
+    if label not in aliases:
+        raise ValueError(f"Unrecognized cell-of-origin label: {value!r}")
+    return aliases[label]
+
+
 def _count_coo_label(series: pd.Series, label: str) -> int:
-    known = series[~series.map(_is_missing)]
-    if known.empty:
-        return 0
-    return int(known.astype(str).str.strip().str.fullmatch(label, case=False).sum())
+    return int(series.map(normalize_coo_label).eq(normalize_coo_label(label)).sum())
 
 
 def normalize_characteristic_label(label: object) -> str:
@@ -414,7 +430,7 @@ def _table_category_sum_footnotes(
     ]
     stage_rows = ["  I(X)B/E", "  II(X)A/E", "  III", "  IV"]
     ipi_rows = ["  0–2", "  ≥3"]
-    coo_rows = ["  ABC", "  GCB", "  Intermediate"]
+    coo_rows = COO_CATEGORY_ROWS
     footnotes: list[str] = []
 
     for loc in LOCATION_ORDER:
@@ -725,11 +741,16 @@ def assignable_missing_footnote(
         parts.append(f"Validation: {_format_site_missing_counts(validation)}")
     if not parts:
         return None
-    return f"patients without assignable {feature}: " + "; ".join(parts)
+    prefix = (
+        "patients with missing cell-of-origin results"
+        if feature == "cell-of-origin"
+        else f"patients without assignable {feature}"
+    )
+    return prefix + ": " + "; ".join(parts)
 
 
 STAGE_CATEGORY_ROWS = ["  I(X)B/E", "  II(X)A/E", "  III", "  IV"]
-COO_CATEGORY_ROWS = ["  ABC", "  GCB", "  Intermediate"]
+COO_CATEGORY_ROWS = ["  ABC", "  GCB", COO_UNCLASSIFIED_ROW]
 
 
 def discovery_ipi_missing_counts(
@@ -1031,8 +1052,6 @@ def _cell_display(
     text = "" if value is None or (isinstance(value, float) and pd.isna(value)) else str(value)
     if text.lower() == "nan":
         text = ""
-    if column is None and row_label in COO_CATEGORY_ROWS and text.strip() == "Intermediate":
-        text = text.replace("Intermediate", "Unclassified")
     marks = markers.get((row_label, column), [])
     if not marks:
         return text
@@ -2010,7 +2029,7 @@ def calculate_group_stats(
         coo = subset["COO_NanoString"]
         stats.coo_ABC = str(_count_coo_label(coo, "ABC"))
         stats.coo_GCB = str(_count_coo_label(coo, "GCB"))
-        stats.coo_Intermediate = str(_count_coo_label(coo, "Intermediate"))
+        stats.coo_Intermediate = str(_count_coo_label(coo, "UNC"))
 
     # FISH / ISH
     if {"myc_fish", "bcl2_fish"}.issubset(subset.columns):
@@ -2087,7 +2106,7 @@ def build_characteristic_labels(treatment_levels: list[str]) -> list[str]:
         "Cell-of-origin (Lymph2CX):",
         "  ABC",
         "  GCB",
-        "  Intermediate",
+        COO_UNCLASSIFIED_ROW,
         "In situ hybridization:",
         "  MYC/BCL2",
         "  MYC",

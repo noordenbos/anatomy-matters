@@ -72,7 +72,7 @@ ARCHETYPE_IPI_COHORTS = (
     },
     {
         "key": "include_pcnsl",
-        "label": "Include PCNSL (IPI/MSKCC)",
+        "label": "Include PCNSL",
         "stem": "cox_multivar_archetype_ipi_include_pcnsl_OS",
     },
 )
@@ -215,7 +215,7 @@ def run_multivariable_archetype_ipi(
     out_dir: Path,
     show: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, int]]:
-    """Multivariable Cox: Archetype + IPI_score (reference archetype complex immune; IPI/MSKCC 0–2)."""
+    """Fit Archetype + primary risk, with IPI 0–2 / MSKCC classes 1–2 as reference."""
     out_dir = Path(out_dir)
     work = surv.dropna(subset=[TIME_COL, EVENT_COL, "Archetype", "IPI_score"]).copy()
     if work.shape[0] < 10 or int(work[EVENT_COL].sum()) < 5:
@@ -235,15 +235,21 @@ def run_multivariable_archetype_ipi(
 
     from .cox_forest_plot import save_cox_forest_table
 
+    from .validation_ipi import label_primary_risk_forest
+
+    includes_pcnsl = bool(work["Location"].map(_is_pcnsl_location).any())
+    risk_name = "IPI/MSKCC" if includes_pcnsl else "IPI"
+    forest_input = _cox_to_forest_df(
+        cph,
+        f"Archetype + {risk_name} ({cohort_label})",
+        ("Archetype", "IPI_score"),
+        categorical_spec,
+    )
+    forest_input = label_primary_risk_forest(forest_input, includes_pcnsl=includes_pcnsl)
     forest_df = save_cox_forest_table(
-        _cox_to_forest_df(
-            cph,
-            f"Archetype + IPI ({cohort_label})",
-            ("Archetype", "IPI_score"),
-            categorical_spec,
-        ),
+        forest_input,
         out_dir / f"{out_stem}_forest",
-        title=f"Multivariable Cox — {ENDPOINT}: Archetype + IPI ({cohort_label}, validation)",
+        title=f"Multivariable Cox — {ENDPOINT}: Archetype + {risk_name} ({cohort_label}, validation)",
         log_x=True,
         show=show,
     )
@@ -1210,16 +1216,16 @@ ARCHETYPE_OS_FOREST_DISPLAY_LABELS = {
     "Ennishi": "External: Ennishi",
 }
 
-# Fallback external + legacy internal rows (updated Validation is recomputed from pred).
+# Fallback study rows; Validation is recomputed from pred when available.
 ARCHETYPE_OS_BENCHMARK_ROWS: tuple[dict[str, object], ...] = (
     {
         "Dataset": "Validation",
-        "n": 302,
+        "n": 303,
         "Events": 102,
-        "HR": 1.84,
-        "ci_lower": 1.04,
-        "ci_upper": 3.27,
-        "p": 0.0367,
+        "HR": 1.8257982323334834,
+        "ci_lower": 1.0290597990963104,
+        "ci_upper": 3.2394027908965897,
+        "p": 0.039601317421780996,
     },
     {
         "Dataset": "Schmitz",

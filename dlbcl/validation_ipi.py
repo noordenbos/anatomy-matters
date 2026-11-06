@@ -35,6 +35,35 @@ _PCNSL_MARKERS = frozenset({"cns", "pcns", "pcnsl", "brain"})
 _MISSING_TEXT = frozenset({"", "nan", "none", "na", "unk", "unknown", "<na>", "nat"})
 
 
+
+def label_primary_risk_forest(
+    plot_df: pd.DataFrame, *, includes_pcnsl: bool
+) -> pd.DataFrame:
+    """Display the scoring systems behind primary risk buckets without recoding data.
+
+    Stored model levels stay ``0-2`` / ``>=3``. PCNSL uses MSKCC classes
+    1–2 / 3, whereas systemic cases use IPI scores 0–2 / ≥3.
+    """
+    out = plot_df.copy()
+    risk = out["factor"].isin(["IPI", "IPI_score"])
+    if not risk.any():
+        return out
+    levels = out.loc[risk, "label"].astype(str).str.strip().replace(
+        {"0–2": BUCKET_PRIMARY_LOW, "≥3": BUCKET_PRIMARY_HIGH}
+    )
+    unexpected = sorted(set(levels) - set(PRIMARY_CATEGORIES))
+    if unexpected:
+        raise ValueError(f"Expected primary risk buckets {PRIMARY_CATEGORIES}; got {unexpected}")
+    labels = (
+        {BUCKET_PRIMARY_LOW: "IPI 0–2 / MSKCC 1–2", BUCKET_PRIMARY_HIGH: "IPI ≥3 / MSKCC 3"}
+        if includes_pcnsl
+        else {BUCKET_PRIMARY_LOW: "0–2", BUCKET_PRIMARY_HIGH: "≥3"}
+    )
+    out.loc[risk, "factor"] = "IPI/MSKCC" if includes_pcnsl else "IPI"
+    out.loc[risk, "label"] = levels.map(labels)
+    return out
+
+
 def _is_missing(value: object) -> bool:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return True
