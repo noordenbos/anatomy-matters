@@ -455,7 +455,6 @@ def build_genomic_profiling_uns(
     return apply_genomic_profiling_exclusions({
         "events": events,
         "sample_map": sample_map,
-        "location_class": location_class,
         "flat": flat,
         "alteration_palette": ALTERATION_PALETTE,
         "location_palette": LOCATION_PALETTE,
@@ -467,7 +466,7 @@ def is_nested_genomic_profiling(gp: object) -> bool:
 
 
 # Keys safe for public release (no sequencing filenames / local paths).
-RELEASE_KEYS = ("events", "location_class", "alteration_palette", "location_palette", "ref")
+RELEASE_KEYS = ("events", "alteration_palette", "location_palette", "ref")
 
 
 def _load_panel_symbol_list(panel_csv: Path) -> list[str]:
@@ -651,6 +650,14 @@ def audit_genomic_profiling_phi(gp: dict) -> list[dict]:
         _check(path, "source_files")
 
     return findings
+
+
+def genomic_profiling_view(adata) -> dict:
+    """Attach location annotations from the canonical case table at use time."""
+    from .case_assignments import discovery_assignments
+    gp = dict(adata.uns['genomic_profiling'])
+    gp['location_class'] = build_location_class(discovery_assignments(adata).reset_index())
+    return apply_genomic_profiling_exclusions(gp)
 
 
 def export_for_r(gp: dict, out_dir: Path) -> dict[str, Path]:

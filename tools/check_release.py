@@ -35,7 +35,10 @@ def check(root=ROOT,require_published=False):
                 if c.get('execution_count') is None:errors.append(f'Unexecuted cell {path.name}:{i}')
                 if any(o.output_type=='error' for o in c.get('outputs',[])):errors.append(f'Error output {path.name}:{i}')
         notebooks.append(path.name)
-    if len(notebooks)!=16:errors.append(f'Expected 16 public notebooks, found {len(notebooks)}')
+    required={f'fig{i}.ipynb' for i in range(1,7)} | {f'supplemental_fig{i}.ipynb' for i in range(1,6)} | {
+        'table1.ipynb','genomic_classification_audit.ipynb','transcriptomic_classification_audit.ipynb',
+        'genomic_panel_call_confidence.ipynb','transcriptomic_panel_call_confidence.ipynb','supplementary_tables.ipynb'}
+    if required-set(notebooks):errors.append('Missing public notebooks: '+', '.join(sorted(required-set(notebooks))))
     with h5py.File(root/'data/DLBCL_location_2026.h5ad','r') as f:
         for key,n in [('uns/case_classifications',64),('uns/validation_cohort/case_classification_validation',303)]:
             x=read_elem(f[key]);ids=x.patient_id if 'patient_id' in x else x.index
@@ -57,6 +60,8 @@ def check(root=ROOT,require_published=False):
                 if private.search(str(obj.asstr()[()])):errors.append(f'Local path in AnnData:{name}')
         f.visititems(visit)
     load_public_adata(root/'data/public/panel_call_confidence.public.h5ad')
+    from dlbcl.supplementary_source import load_source
+    load_source(root/'data/DLBCL_location_2026.h5ad')
     result={'version':manifest['version'],'status':manifest['status'],'notebooks_checked':notebooks,'errors':errors}
     print(json.dumps(result,indent=2))
     if errors:raise SystemExit(1)

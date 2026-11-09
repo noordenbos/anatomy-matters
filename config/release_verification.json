@@ -69,13 +69,13 @@
   "classifier_notebook_execution": "All 4 audit/confidence notebooks passed in the clean environment.",
   "clinical_table_verification": "Table 1 retains recorded UNC classifications separately from unavailable COO values; embedded clinical inputs reproduce the source cohort counts.",
   "publication": "Pending user Zenodo upload and fixed record ID.",
-  "release_checks": "16 executed notebooks; both asset checksums; canonical tables; public source schema; path checks passed.",
+  "release_checks": "17 required executed notebooks plus the local classifier-methods notebook; both asset checksums; canonical tables; public source schema; supplementary source/data/code fingerprints; path checks passed on 2026-11-09.",
   "data_assets": [
     {
       "name": "DLBCL_location_2026.publish.h5ad",
       "path": "data/DLBCL_location_2026.h5ad",
-      "bytes": 636549348,
-      "sha256": "5d107fc78b6cfa28869dcae01fc1cecaec6009c1daf4d7bfb3b1b11a02b2265b"
+      "bytes": 642522107,
+      "sha256": "c9c7fb5003a74dbab51d71b5d699c857a6f096c4b4a82da079e7dd802c4bfe5c"
     },
     {
       "name": "panel_call_confidence.public.h5ad",
@@ -163,5 +163,20 @@
       "events": 304
     },
     "notebooks": "Figure 5, supplementary Figures 4 and 5, and Table 1 executed on the packaged AnnData. Clinical-risk forest labels display IPI and MSKCC categories explicitly."
+  },
+  "supplementary_source_verification": {
+    "verification_date": "2026-11-09",
+    "schema": "supplementary-source-v1",
+    "worksheets": 73,
+    "external_spreadsheet_or_csv_inputs": 0,
+    "scientific_payload_preserved": true,
+    "removed_redundant_entries": [
+      "uns/gene_expression_columns",
+      "uns/genomic_profiling/location_class"
+    ],
+    "staining_volumes": "omitted",
+    "numerical_results": "Captured reviewed outputs with scientific-input and producer-code fingerprints; no statistical refit during migration",
+    "clinical_discrepancies": "Preserved for review; no clinical adjudication during migration",
+    "stale_figure1_export": "17 LymphPlex export labels now drawn from canonical assignments; canonical calls unchanged"
   }
 }
