@@ -74,8 +74,8 @@
     {
       "name": "DLBCL_location_2026.publish.h5ad",
       "path": "data/DLBCL_location_2026.h5ad",
-      "bytes": 642522107,
-      "sha256": "c9c7fb5003a74dbab51d71b5d699c857a6f096c4b4a82da079e7dd802c4bfe5c"
+      "bytes": 645809943,
+      "sha256": "5e115a2833f35bb20b3a9b5d56ea53d4cf23c3ca75651f03ba77e1d678469145"
     },
     {
       "name": "panel_call_confidence.public.h5ad",
@@ -177,6 +177,7 @@
     "staining_volumes": "omitted",
     "numerical_results": "Captured reviewed outputs with scientific-input and producer-code fingerprints; no statistical refit during migration",
     "clinical_discrepancies": "Preserved for review; no clinical adjudication during migration",
-    "stale_figure1_export": "17 LymphPlex export labels now drawn from canonical assignments; canonical calls unchanged"
+    "stale_figure1_export": "17 LymphPlex export labels now drawn from canonical assignments; canonical calls unchanged",
+    "panel_membership": "Author-confirmed panel excludes CD30 and includes SMACT; CD57 remains documented as excluded after staining failure."
   }
 }

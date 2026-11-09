@@ -59,9 +59,12 @@ def migrate(source, reviewed_json, output, *, expected_source_sha256, replace_ex
         else:
             key='imc_staining_protocol' if name=='S2 Staining protocol' else 'imc_antibody_panel' if name=='S2 IMC antibody panel' else 'table_'+str(i)
             data=frame(name)
+            if name=='S2 IMC antibody panel':
+                # Author-confirmed study panel: CD30 is not included; retain SMACT.
+                data=data.loc[~data['Target'].str.strip().str.upper().eq('CD30')].reset_index(drop=True)
             if name=='S2 Staining protocol':
                 data=data.loc[~data['Target or component'].eq('Buffer'),[c for c in data if 'volume' not in c.lower()]].reset_index(drop=True)
-                item['note']='ON=overnight; RT=room temperature; 4C=4 °C. Antibody identity, dilution and incubation conditions are retained. CD30 has no recorded protocol entry; SMACT supplier differs from the panel record. CD57 was excluded after staining failure.'
+                item['note']='ON=overnight; RT=room temperature; 4C=4 °C. Antibody identity, dilution and incubation conditions are retained. SMACT supplier differs from the panel record. CD57 was excluded after staining failure.'
             kind='resource' if sheet['section'] in {'S2','S5'} and name not in {'S5 DNA features','S5 LymphoMAP selected'} else 'derived_result'
             entry=encode_table(data)
             entry['table_sha256']=table_digest(decode_table(entry))
@@ -80,7 +83,7 @@ def migrate(source, reviewed_json, output, *, expected_source_sha256, replace_ex
     coverage=frame('S5 RNA coverage')[['Classifier','Subtype','Feature definition','Scope']].to_dict('records')
     readme=[list(row) for row in by_name['Read me']['rows']]
     for row in readme:
-        if row[0]=='Laboratory source notes':row[1]='SMACT supplier differs between panel and protocol; CD30 is absent from the recorded protocol. Entries are retained without adjudication.'
+        if row[0]=='Laboratory source notes':row[1]='SMACT supplier differs between panel and protocol. The recorded suppliers are retained without adjudication.'
         if row[0]=='Data source':row[1]='Prepared public-release AnnData with canonical case assignments, clinical inputs, assay annotations and supplementary resources/results.'
     audit={'source_sha256':expected_source_sha256,'reviewed_material_sha256':sha256(reviewed_json),'removals':[],
            'clinical_values_changed':False,'classification_values_changed':False,
@@ -90,7 +93,8 @@ def migrate(source, reviewed_json, output, *, expected_source_sha256, replace_ex
                           'classification_audit_*':'historical audit records, not active calls','lymphplex_call_audit':'derived audit checked against canonical calls',
                           'gene_expression':'processed expression for analysis','gep_raw_probes':'raw assay measurements and authoritative probe annotations',
                           'gep_normalized_probes':'processed measurements; overlapping probe annotations must match raw metadata'},
-           'unresolved_source_items':['T31: recorded stage IV versus analysis stage II','OS description/event mismatch: T52','DSS description/event mismatch: T23, T33, T40, T53, T58','SMACT supplier differs between laboratory tables; CD30 missing from protocol']}
+           'panel_membership_confirmation':'Author confirmed that CD30 is not in the study panel and SMACT is included.',
+           'unresolved_source_items':['T31: recorded stage IV versus analysis stage II','OS description/event mismatch: T52','DSS description/event mismatch: T23, T33, T40, T53, T58','SMACT supplier differs between laboratory tables']}
     with h5py.File(source,'r') as f:
         if NAMESPACE in f and not replace_existing:raise ValueError('Supplementary namespace already exists; use --replace-supplementary with newly reviewed outputs to refresh it explicitly')
         if REMOVABLE[0] in f:

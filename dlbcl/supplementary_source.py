@@ -155,6 +155,10 @@ def validate_store(uns):
         if len(frame)!=n or not frame.index.is_unique:
             raise ValueError('Invalid canonical '+cohort+' cohort')
     protocol = decode_table(store['tables']['imc_staining_protocol'])
+    panel = decode_table(store['tables']['imc_antibody_panel'])
+    targets = set(panel['Target'].str.strip().str.upper())
+    if 'CD30' in targets or 'SMACT' not in targets:
+        raise ValueError('IMC panel membership differs from the confirmed study panel: SMACT is required and CD30 is not included')
     if any('volume' in str(c).lower() for c in protocol.columns) or protocol['Target or component'].eq('Buffer').any():
         raise ValueError('Staining protocol must not contain volume amounts or volume-only buffer rows')
     probe_annotations(uns)
