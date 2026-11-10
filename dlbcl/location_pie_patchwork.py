@@ -166,7 +166,7 @@ def _legend_entries_for_column(
         entries.append((display, color))
 
     if label == "Spatial Protein":
-        rank_order = ["cytotoxic predominant", "low immune", "complex immune"]
+        rank_order = ["cytotoxic predominant", "low immune", "diverse immune"]
         rank = {name: i for i, name in enumerate(rank_order)}
         entries.sort(key=lambda x: (rank.get(str(x[0]), 999), str(x[0])))
     return entries

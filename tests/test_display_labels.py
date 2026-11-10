@@ -27,16 +27,16 @@ class DisplayLabelTests(unittest.TestCase):
 
     def test_confidence_intervals_are_not_archetype_abbreviations(self):
         self.assertEqual(display_text("HR (95% CI)"), "HR (95% CI)")
-        self.assertEqual(display_text("low immune__vs__complex immune"), "low immune__vs__diverse immune")
-        self.assertEqual(display_text("Complex immune vs rest (95% CI)"), "Diverse immune vs rest (95% CI)")
+        self.assertEqual(display_text("low immune__vs__diverse immune"), "low immune__vs__diverse immune")
+        self.assertEqual(display_text("Diverse immune vs rest (95% CI)"), "Diverse immune vs rest (95% CI)")
 
     def test_rendered_labels_survive_redraw_without_changing_data(self):
-        source = pd.DataFrame({"complex immune": [1.0, 2.0], "low immune": [3.0, 4.0]})
+        source = pd.DataFrame({"diverse immune": [1.0, 2.0], "low immune": [3.0, 4.0]})
         before = source.copy(deep=True)
         fig, ax = plt.subplots()
-        bars = ax.bar([0, 1], source.sum().values, label="complex immune")
+        bars = ax.bar([0, 1], source.sum().values, label="diverse immune")
         ax.set_xticks([0, 1], source.columns)
-        ax.set_title("Complex immune (95% CI)")
+        ax.set_title("Diverse immune (95% CI)")
         ax.legend()
         heights = [bar.get_height() for bar in bars]
         finalize_figure_labels(fig)
@@ -50,7 +50,7 @@ class DisplayLabelTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "labels.svg"
             fig.savefig(p)
-            self.assertNotIn("complex immune", p.read_text().lower())
+            self.assertIn("diverse immune", p.read_text().lower())
 
     def test_numeric_axes_are_unchanged(self):
         fig, ax = plt.subplots()

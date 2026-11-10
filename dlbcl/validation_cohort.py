@@ -28,7 +28,7 @@ NGS_SAMPLE_ID_COLUMN = "filename"
 ARCHETYPE_LABELS = {
     1: "low immune",
     2: "cytotoxic predominant",
-    3: "complex immune",
+    3: "diverse immune",
 }
 
 

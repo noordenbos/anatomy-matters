@@ -69,19 +69,19 @@
   "classifier_notebook_execution": "All 4 audit/confidence notebooks passed in the clean environment.",
   "clinical_table_verification": "Table 1 retains recorded UNC classifications separately from unavailable COO values; embedded clinical inputs reproduce the source cohort counts.",
   "publication": "Pending user Zenodo upload and fixed record ID.",
-  "release_checks": "17 required executed notebooks plus the local classifier-methods notebook; both asset checksums; canonical tables; public source schema; supplementary source/data/code fingerprints; path checks passed on 2026-11-09.",
+  "release_checks": "18 local notebooks, including 17 required release notebooks; both asset checksums; canonical source labels; supplementary data and producer fingerprints; public path checks verified on 2026-11-10.",
   "data_assets": [
     {
       "name": "DLBCL_location_2026.publish.h5ad",
       "path": "data/DLBCL_location_2026.h5ad",
-      "bytes": 645809943,
-      "sha256": "5e115a2833f35bb20b3a9b5d56ea53d4cf23c3ca75651f03ba77e1d678469145"
+      "bytes": 649294575,
+      "sha256": "1ec2d258f6a9f34155657670d5836d4bb058dee9e60f96e7ecef6dcbb141dc0e"
     },
     {
       "name": "panel_call_confidence.public.h5ad",
       "path": "data/public/panel_call_confidence.public.h5ad",
-      "bytes": 65396590,
-      "sha256": "ee668f4ca1af45f1363bcc06d01c92305d8048655fc95206f7397d94b077abe7"
+      "bytes": 139362906,
+      "sha256": "0a63524954d6bfb3320e0fe7985078f5376a0668317c3301dd3f419c8cd41ac3"
     }
   ],
   "figure1_final_check": {
@@ -179,5 +179,41 @@
     "clinical_discrepancies": "Preserved for review; no clinical adjudication during migration",
     "stale_figure1_export": "17 LymphPlex export labels now drawn from canonical assignments; canonical calls unchanged",
     "panel_membership": "Author-confirmed panel excludes CD30 and includes SMACT; CD57 remains documented as excluded after staining failure."
+  },
+  "canonical_label_verification": {
+    "date": "2026-11-10",
+    "scope": [
+      "Ciavarella Hot/Intermediate/Cold",
+      "spatial archetype diverse immune"
+    ],
+    "case_membership_changes": 0,
+    "numeric_result_changes": 0,
+    "ciavarella_calls_reproduced": 367,
+    "archetype_renamed_counts": {
+      "Discovery": 20,
+      "Validation": 92
+    },
+    "tests_passed": 86,
+    "method": "Source labels updated; figure-time archetype rename removed; canonical readers reject obsolete labels; result table numbers and nonlabel AnnData payload verified unchanged.",
+    "workbook": {
+      "worksheets": 73,
+      "verified_cells": 146090,
+      "changed_views_visually_reviewed": 51
+    },
+    "executed_notebooks": [
+      "transcriptomic_panel_call_confidence.ipynb",
+      "supplementary_tables.ipynb",
+      "fig3.ipynb",
+      "fig5.ipynb",
+      "fig4.ipynb",
+      "supplemental_fig4.ipynb",
+      "supplemental_fig5.ipynb",
+      "supplemental_fig3.ipynb",
+      "fig1.ipynb",
+      "fig2.ipynb"
+    ],
+    "fresh_figure_exports": "Numerical values preserved; 17 stale Figure 1 CSV LymphPlex labels refreshed from unchanged canonical calls.",
+    "archetype_model_verification": "All 11 displayed model-performance/coefficient/stability tables and both validation prediction summaries match the preceding run, apart from the requested label text.",
+    "runtime_warning_note": "The local NumPy/scikit-learn run emitted repeated matrix-multiplication warnings. Saved Figure 5 output retains all three distinct warnings once; the 11 model result tables match the preceding run exactly."
   }
 }

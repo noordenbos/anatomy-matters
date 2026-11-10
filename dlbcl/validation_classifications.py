@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from .classification_labels import ingest_ciavarella_labels
 
 from .validation_figures import ARCHETYPE_NAME_MAP, DISEASE_TYPE_TO_LOCATION
 
@@ -216,6 +217,7 @@ def build_case_classification_validation(
         normalizer = (
             _normalize_ecotype
             if dst_col in {"Lymphoma_Ecotype", "New_Ecotype"}
+            else ingest_ciavarella_labels if dst_col == "Ciav_Cluster"
             else _normalize_classifier_label
         )
         out[dst_col] = normalizer(pred[src_col]).reindex(pred_idx)

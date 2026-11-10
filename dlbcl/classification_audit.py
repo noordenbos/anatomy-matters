@@ -163,6 +163,9 @@ def promote_calls(source, updates, output, *, audit_name, run_provenance, expect
             if u.isna().any().any(): raise ValueError('Missing calls cannot overwrite classifications')
             rowlookup=pd.Series(old.index,index=ids)
             for col in u:
+                if col == 'Ciav_Cluster':
+                    from .classification_labels import validate_ciavarella_labels
+                    validate_ciavarella_labels(u[col])
                 if col not in new: new[col]=''
                 if isinstance(new[col].dtype,pd.CategoricalDtype): new[col]=new[col].astype(object)
                 for pid,value in u[col].items():

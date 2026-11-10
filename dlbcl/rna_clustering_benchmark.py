@@ -7,6 +7,7 @@ combine its three selection criteria. Those choices are explicit below.
 import numpy as np
 import pandas as pd
 import networkx as nx
+from .classification_labels import CIAVARELLA_LABELS
 from scipy.cluster.hierarchy import linkage, cut_tree
 from scipy.optimize import linear_sum_assignment
 from sklearn.metrics import (adjusted_rand_score, normalized_mutual_info_score,
@@ -29,13 +30,17 @@ def author_median_scale(scores):
 
 
 def ward_partition(expression, standardize=False):
-    """Samples x genes, Euclidean/Ward; three groups, ordered by mean expression."""
+    """Samples x genes; Euclidean/Ward groups named Hot, Intermediate, Cold.
+
+    Names are assigned in descending mean-expression order at classification.
+    No downstream High/Low-to-Hot/Cold conversion is required.
+    """
     x = expression.copy()
     if standardize:
         x = ((x - x.mean()) / x.std(ddof=0).replace(0, np.nan)).fillna(0)
     labels = cut_tree(linkage(x.to_numpy(), method='ward', metric='euclidean'), n_clusters=3).ravel()
     order = sorted(np.unique(labels), key=lambda k: (-float(x.loc[labels == k].to_numpy().mean()), int(k)))
-    names = dict(zip(order, ['High', 'Intermediate', 'Low']))
+    names = dict(zip(order, CIAVARELLA_LABELS))
     return np.array([names[k] for k in labels])
 
 
@@ -125,12 +130,12 @@ def plot_cluster_metrics(metrics, config, cohorts=('Schmitz', 'Morin', 'Li')):
     import matplotlib.pyplot as plt
     from pathlib import Path
     colors = json.loads(Path(config).read_text())['classifiers']['ciavarella']['reference_colors']
-    ciav_colors = dict(zip(['High', 'Intermediate', 'Low'], [colors['Cluster 1'], colors['Cluster 2'], colors['Cluster 3']]))
+    ciav_colors = dict(zip(CIAVARELLA_LABELS, [colors['Cluster 1'], colors['Cluster 2'], colors['Cluster 3']]))
     fig, axes = plt.subplots(4, len(cohorts), figsize=(max(11, 5.3*len(cohorts)), 12), squeeze=False)
     for block, classifier in enumerate(['Kotlov', 'Ciavarella']):
         for col, cohort in enumerate(cohorts):
             d = metrics[(metrics.classifier == classifier) & (metrics.cohort == cohort)].set_index('label')
-            labels = sorted(d.index) if classifier == 'Kotlov' else ['High', 'Intermediate', 'Low']
+            labels = sorted(d.index) if classifier == 'Kotlov' else list(CIAVARELLA_LABELS)
             d = d.reindex(labels)
             for r, metric in enumerate(['recall', 'precision']):
                 ax = axes[2*block+r, col]

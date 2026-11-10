@@ -24,6 +24,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from dlbcl.classification_audit import payload_digest, sha256
 from dlbcl.supplementary_source import SCHEMA, NAMESPACE, encode_table, decode_table, table_digest, load_source, producer_digest
+from dlbcl.classification_labels import ARCHETYPE_FIELD_DEFINITION, CIAVARELLA_FIELD_DEFINITION, ingest_ciavarella_labels
 
 REMOVABLE=['uns/gene_expression_columns','uns/genomic_profiling/location_class']
 
@@ -79,8 +80,16 @@ def migrate(source, reviewed_json, output, *, expected_source_sha256, replace_ex
     aliases=frame('S4 Gene symbol mapping')
     aliases=dict(zip(aliases.loc[aliases['Assay gene label'].ne(aliases['Classifier gene symbol']),'Assay gene label'],aliases.loc[aliases['Assay gene label'].ne(aliases['Classifier gene symbol']),'Classifier gene symbol']))
     definitions={r['Field']:r['Definition'] for r in frame('S1 Field definitions').to_dict('records')}
+    definitions['Ciav_Cluster']=CIAVARELLA_FIELD_DEFINITION
+    definitions['tumorimmune_archetype']=ARCHETYPE_FIELD_DEFINITION
     memberships=frame('S5 RNA reference genes').drop(columns=['On BLYM777'])
+    selected=memberships['Classifier'].eq('Ciavarella')
+    memberships.loc[selected,'Subtype memberships']=memberships.loc[selected,'Subtype memberships'].map(
+        lambda value:', '.join(ingest_ciavarella_labels(value.split(', '))))
     coverage=frame('S5 RNA coverage')[['Classifier','Subtype','Feature definition','Scope']].to_dict('records')
+    for row in coverage:
+        if row['Classifier']=='Ciavarella' and row['Subtype']!='All':
+            row['Subtype']=ingest_ciavarella_labels([row['Subtype']]).iloc[0]
     readme=[list(row) for row in by_name['Read me']['rows']]
     for row in readme:
         if row[0]=='Laboratory source notes':row[1]='SMACT supplier differs between panel and protocol. The recorded suppliers are retained without adjudication.'

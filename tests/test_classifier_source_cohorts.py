@@ -9,7 +9,7 @@ class ClassifierSourceCohortTests(unittest.TestCase):
     def frame(self):
         return pd.DataFrame({
             'Location':['bone','nodal','PCNS','testis']*16,
-            'tumorimmune_archetype':['low immune','complex immune']*32,
+            'tumorimmune_archetype':['low immune','diverse immune']*32,
             'genomic_tested':[True]*61+[False]*3,
             'Lymphgen':['MCD','EZB']*32,
             'lymphomap':['FMAC','TEX']*32,

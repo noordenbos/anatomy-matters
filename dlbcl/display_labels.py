@@ -7,24 +7,17 @@ confidence-interval abbreviations must remain unchanged.
 
 from __future__ import annotations
 
-import re
-
 from .classifier_colors import classifier_key, classifier_reference_label
 
 FIGURE_3D_TITLE = "Differentially expressed genes"
 ARCHETYPE_SHORT_LABELS = {
-    "low immune": "LI", "cytotoxic predominant": "CP", "complex immune": "DI",
+    "low immune": "LI", "cytotoxic predominant": "CP", "diverse immune": "DI",
 }
 
 
 def display_text(value) -> str:
-    """Update the archetype name in prose/labels, preserving 95% CI notation."""
-    text = str(value)
-    return re.sub(
-        r"(?<![A-Za-z])complex immune(?![A-Za-z])",
-        lambda m: "Diverse immune" if m.group()[0].isupper() else "diverse immune",
-        text, flags=re.IGNORECASE,
-    )
+    """Use canonical source labels verbatim, including confidence-interval text."""
+    return str(value)
 
 
 def classifier_display_label(classifier: str, value) -> str:

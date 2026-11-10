@@ -14,7 +14,7 @@ class KotlovDotplotTests(unittest.TestCase):
         frame = pd.DataFrame({
             'KotlovSig': ['Depleted', 'Inflammatory', 'Mesenchymal'] * 8,
             'Location': ['bone', 'nodal', 'PCNS', 'testis'] * 6,
-            'tumorimmune_archetype': ['low immune', 'complex immune'] * 12,
+            'tumorimmune_archetype': ['low immune', 'diverse immune'] * 12,
             'genomic_tested': True,
         })
         for stratifier in ['location', 'archetype']:

@@ -144,7 +144,7 @@ for cohort,x in expression.items():
 
 Kotlov uses 22 author ssGSEA signatures plus NFkB/p53/PI3K PROGENy scores. Missing PROGENy genes contribute zero; signature coverage is exported. Median scaling uses the author's **mean absolute deviation about the mean**, then clips to ±3. The Louvain threshold grid and selection criteria are printed below. Cluster profiles are mapped to the highest-correlated external published subtype centroid, permitting many-to-one mapping. The stored centroids were built from panel-restricted Schmitz, Morin and Li references; provenance is supplied alongside them. This is not the author's KNN classifier.
 
-Ciavarella uses the 45-gene Euclidean/Ward reconstruction, cut into three groups and ordered by average expression. These procedures depend on the query cohort; adding or removing patients can change assignments. [Kotlov et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC8178179/).'''),C('''from dlbcl.rna_clustering_benchmark import author_median_scale, select_louvain, ward_partition
+Ciavarella uses the 45-gene Euclidean/Ward reconstruction, cut into three groups named Hot, Intermediate and Cold in descending average-expression order. These procedures depend on the query cohort; adding or removing patients can change assignments. [Kotlov et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC8178179/).'''),C('''from dlbcl.rna_clustering_benchmark import author_median_scale, select_louvain, ward_partition
 print(inspect.getsource(select_louvain))
 spec=importlib.util.spec_from_file_location('kotlov_author_utils',config['kotlov_utils'])
 author=importlib.util.module_from_spec(spec);spec.loader.exec_module(author)
@@ -177,13 +177,19 @@ for cohort,x in expression.items():
         mappings.append(dict(cohort=cohort,cluster=cluster,label=named[cluster],correlation=correlations.iloc[0],margin=correlations.iloc[0]-correlations.iloc[1]))
     updates[cohort]['KotlovSig']=clusters.map(named).to_numpy()
     updates[cohort]['Kotlov_cluster_id']=clusters.to_numpy()
-    genes=list(dict.fromkeys(features[features.classifier.eq('Ciavarella')].gene.map(canon)))
-    if not set(genes)<=set(x.index): raise ValueError('Ciavarella requires all declared 45 features')
-    calls=ward_partition(x.loc[genes].T,standardize=False)
-    updates[cohort]['Ciav_Cluster']=[{'High':'Hot','Intermediate':'Intermediate','Low':'Cold'}[v] for v in calls]
 pd.DataFrame(coverage).to_csv(OUT/'kotlov_feature_coverage.csv',index=False)
 pd.DataFrame(mappings).to_csv(OUT/'kotlov_subtype_mapping.csv',index=False)
 display(pd.DataFrame(mappings))
+'''),M('''### Ciavarella calls
+
+The classifier emits Hot, Intermediate and Cold directly, in descending mean signature-expression order. The values stored in AnnData are the values used in tables and figures.'''),C('''from dlbcl.rna_clustering_benchmark import ward_partition
+print(inspect.getsource(ward_partition))
+features=pd.read_csv(ROOT/'config/classification_audit/clustering_features.csv')
+genes=list(dict.fromkeys(features.loc[features.classifier.eq('Ciavarella'),'gene'].map(canon)))
+for cohort,x in expression.items():
+    if not set(genes)<=set(x.index): raise ValueError('Ciavarella requires all declared 45 features')
+    updates[cohort]['Ciav_Cluster']=ward_partition(x.loc[genes].T,standardize=False)
+display(pd.DataFrame({cohort:frame['Ciav_Cluster'].value_counts() for cohort,frame in updates.items()}))
 '''),M('''## 5. Full Lymph2Cx research reconstruction
 
 Apply the fixed 15-predictor coefficients after subtracting the mean log2 expression of five housekeeping genes. Every input gene is required. This study matrix contains ISY1 and RAB29, so no read-through-gene proxy or dropped predictor is used. The two displayed borders were calibrated externally on GSE178394 NanoString data; no study labels enter the fit. Gene-specific codeset calibration and proprietary QC remain unavailable. [Public calibration cohort](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE178394).'''),C('''model=json.loads((ROOT/'config/classification_audit/lymph2cx_full.json').read_text())

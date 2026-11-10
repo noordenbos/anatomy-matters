@@ -15,12 +15,6 @@ from .dlbcl_io import DISCOVERY_PATIENTS, NotebookPaths, load_archetype_assignme
 from .validation_cohort import cohort_notebook_inputs
 from .validation_figures import DISEASE_TYPE_TO_LOCATION
 
-ARCHETYPE_CANONICAL = {
-    "complex immune": "diverse immune",
-    "diverse immune": "diverse immune",
-    "low immune": "low immune",
-    "cytotoxic predominant": "cytotoxic predominant",
-}
 ARCHETYPE_SHORT = {
     "diverse immune": "DI",
     "low immune": "LO",
@@ -313,8 +307,9 @@ HLA_CLASS_GROUP_PROGRAM_HEATMAP_ORDER = [
 def canonical_archetype(value: object) -> str | float:
     if pd.isna(value):
         return np.nan
-    key = str(value).strip().lower()
-    return ARCHETYPE_CANONICAL.get(key, str(value).strip())
+    from .classification_labels import validate_archetype_labels
+    validate_archetype_labels([value])
+    return str(value)
 
 
 def _as_frame(obj) -> pd.DataFrame:
@@ -370,7 +365,7 @@ def _discovery_metadata(adata, paths: NotebookPaths | None, patient_subset: list
     if "tumorimmune_archetype" in meta.columns:
         meta["Archetype"] = meta["tumorimmune_archetype"].map(canonical_archetype)
     else:
-        label_map = {1: "low immune", 2: "cytotoxic predominant", 3: "complex immune"}
+        label_map = {1: "low immune", 2: "cytotoxic predominant", 3: "diverse immune"}
         meta["Archetype"] = pd.to_numeric(meta["tumorimmune_archetype_id"], errors="coerce").map(label_map)
 
     loc_source = "Location" if "Location" in meta.columns else "disease_type"

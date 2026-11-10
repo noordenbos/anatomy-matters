@@ -18,10 +18,10 @@ from dlbcl.migrate_case_assignments import migrate_bundle
 
 def fixture():
     cc = pd.DataFrame({'patient_id':['T1','T2'], 'tumorimmune_archetype_id':[1,3],
-        'tumorimmune_archetype':['low immune','complex immune'], 'DLBclass':['C1','C5'],
+        'tumorimmune_archetype':['low immune','diverse immune'], 'DLBclass':['C1','C5'],
         'COO_NanoString':['ABC','GCB']})
     vc = pd.DataFrame({'tumorimmune_archetype_id':[1,3],
-        'tumorimmune_archetype':['low immune','complex immune'], 'DLBclass':['C1','C5'],
+        'tumorimmune_archetype':['low immune','diverse immune'], 'DLBclass':['C1','C5'],
         'COO_NanoString':['ABC','GCB']}, index=pd.Index(['V1','V2'],name='patient_id'))
     meta = pd.DataFrame({'disease_type':['Brain','Bone'], 'age':[50,60],
         'COO_NanoString':['WRONG','WRONG']}, index=pd.Index(['V1','V2'],name='patient_alias'))

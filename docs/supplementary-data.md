@@ -62,3 +62,22 @@ overwrite its source file or silently import CSVs during ordinary extraction.
 The generated Excel/CSV files are exports. Edits to an export do not update
 AnnData. Patient corrections belong in the canonical clinical tables, and
 reviewed classification changes belong in the canonical assignment tables.
+
+## Ciavarella label vocabulary
+
+The classifier assigns `Hot`, `Intermediate` and `Cold` directly, in descending
+mean signature-expression order. These labels are stored in both canonical case
+tables, the external benchmark tables and the supplementary feature definitions.
+Current-data readers validate the vocabulary and do not translate labels for
+display. Older external files using `High` and `Low` are normalized once by
+`ingest_ciavarella_labels` or `ingest_ciavarella_table` when imported.
+
+The naming update reproduced all 64 discovery and 303 validation assignments
+exactly. External benchmark counts and numerical supplementary results were
+preserved. This verified naming-only change refreshed the corresponding producer
+fingerprints without rerunning unchanged statistical models; the migration record
+is stored in `uns["supplementary"]["label_standardization_json"]`.
+
+## Spatial archetype vocabulary
+
+The source case tables and supplementary results use **low immune**, **cytotoxic predominant** and **diverse immune** (IDs 1, 2 and 3). Classification and figure notebooks use the same names. Readers reject obsolete labels instead of renaming them when figures are drawn. The naming migration preserved patient membership, archetype IDs, measurements and numerical results; its verification is recorded in `uns["supplementary"]["label_standardization_json"]`.

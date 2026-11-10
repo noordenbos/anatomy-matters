@@ -25,9 +25,9 @@ import pandas as pd
 # --------------------------------------------------------------------------- #
 # Shared constants (matched to discovery notebooks)
 # --------------------------------------------------------------------------- #
-ARCHETYPE_NAME_MAP = {1: "low immune", 2: "cytotoxic predominant", 3: "complex immune"}
+ARCHETYPE_NAME_MAP = {1: "low immune", 2: "cytotoxic predominant", 3: "diverse immune"}
 ARCHETYPE_ORDER = [1, 2, 3]
-CLUSTER_ORDER = ["low immune", "cytotoxic predominant", "complex immune"]
+CLUSTER_ORDER = ["low immune", "cytotoxic predominant", "diverse immune"]
 SHORT_LABELS = dict(ARCHETYPE_SHORT_LABELS)
 
 # nb11 KM colours
@@ -36,7 +36,7 @@ LOCATION_COLORS = {"PCNS": "#1a2252", "nodal": "#2fa148", "bone": "#f57f20", "te
 KM_ARCHETYPE_COLORS = {1: "#d73027", 2: "#4575b4", 3: "#1a9850"}
 
 # nb6 GEP module-score colours
-CLASS_COLORS = {"low immune": "#d62728", "cytotoxic predominant": "#1f77b4", "complex immune": "#2ca02c"}
+CLASS_COLORS = {"low immune": "#d62728", "cytotoxic predominant": "#1f77b4", "diverse immune": "#2ca02c"}
 
 # Validation disease_type -> discovery anatomical location vocabulary
 DISEASE_TYPE_TO_LOCATION = {

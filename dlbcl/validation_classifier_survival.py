@@ -63,7 +63,7 @@ class ClassifierSpec:
 
 
 CLASSIFIER_SPECS: tuple[ClassifierSpec, ...] = (
-    ClassifierSpec("tumorimmune_archetype", "This work (immune archetype)", "gep", "complex immune"),
+    ClassifierSpec("tumorimmune_archetype", "This work (immune archetype)", "gep", "diverse immune"),
     ClassifierSpec("lymphomap", "Li 2025 LymphoMAP", "gep", "LN"),
     ClassifierSpec("Ciav_Cluster", "Ciavarella 2018 Cluster", "gep", "Cold"),
     ClassifierSpec("KotlovSig", "Kotlov 2021 LME", "gep", "Depleted"),
@@ -81,7 +81,7 @@ PRESPECIFIED_CONTRASTS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "This work (immune archetype)": (
         ("CP vs rest", ("cytotoxic predominant",)),
         ("Low immune vs rest", ("low immune",)),
-        ("Complex immune vs rest", ("complex immune",)),
+        ("Diverse immune vs rest", ("diverse immune",)),
     ),
     "Li 2025 LymphoMAP": (
         ("TEX vs rest", ("TEX",)),

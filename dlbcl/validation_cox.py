@@ -29,7 +29,7 @@ EVENT_COL = "event"
 ENDPOINT = "OS"
 
 REF_LOCATION = "bone"
-REF_ARCHETYPE = "complex immune"
+REF_ARCHETYPE = "diverse immune"
 REF_COO = "GCB"
 
 PENALIZER = 0.01
@@ -97,7 +97,7 @@ def prepare_cox_survival(pred: pd.DataFrame) -> pd.DataFrame:
     surv[EVENT_COL] = pd.to_numeric(pred["vital_status"], errors="coerce")
     surv["Location"] = pred["disease_type"].map(DISEASE_TYPE_TO_LOCATION)
     archetype_id = pd.to_numeric(pred["pred_tumorimmune_archetype_id"], errors="coerce")
-    surv["Archetype"] = archetype_id.map({1: "low immune", 2: "cytotoxic predominant", 3: "complex immune"})
+    surv["Archetype"] = archetype_id.map({1: "low immune", 2: "cytotoxic predominant", 3: "diverse immune"})
     sex_map = {"Male": 1.0, "Female": 0.0, "male": 1.0, "female": 0.0}
     surv["Sex"] = pred["sex"].map(sex_map)
     coo_map = {"GCB": "GCB", "Non-GCB": "ABC"}
@@ -918,13 +918,13 @@ OS_BENCHMARK_HORIZON_YEARS = 5.0
 WITHIN_LOCATION_OS_HORIZON_YEARS = OS_BENCHMARK_HORIZON_YEARS
 
 ARCHETYPE_SHORT_LABELS = {
-    "complex immune": "DI",
+    "diverse immune": "DI",
     "cytotoxic predominant": "CP",
     "low immune": "LO",
 }
 
 WITHIN_LOCATION_REFERENCE_GROUPS: tuple[tuple[str, str], ...] = (
-    ("complex immune", "Ref DI"),
+    ("diverse immune", "Ref DI"),
     ("cytotoxic predominant", "Ref CP"),
     ("low immune", "Ref LO"),
 )
@@ -1043,7 +1043,7 @@ def build_within_location_archetype_forest_df(
     return pd.DataFrame(rows)
 
 
-DI_REFERENCE_ARCHETYPE = "complex immune"
+DI_REFERENCE_ARCHETYPE = "diverse immune"
 VS_DI_CONTRAST_LEVELS: tuple[tuple[str, str], ...] = (
     ("cytotoxic predominant", "CP vs DI"),
     ("low immune", "LO vs DI"),
@@ -1141,7 +1141,7 @@ def save_location_archetype_vs_di_forest_plot(
 
     cohort_note = "cohort-adjusted" if adjust_cohort else "unadjusted"
     title = (
-        f"{ENDPOINT} at {horizon_years:g} y — archetype hazard vs DI (complex immune) by anatomical site "
+        f"{ENDPOINT} at {horizon_years:g} y — archetype hazard vs DI (diverse immune) by anatomical site "
         f"(Discovery+Validation, {cohort_note})"
     )
     return save_location_archetype_vs_di_forest(
@@ -1200,7 +1200,7 @@ def save_within_location_archetype_forest_plots(
 # Archetype OS cohort forest (internal validation + external cohorts)
 # --------------------------------------------------------------------------- #
 
-DIVERSE_IMMUNE_ARCHETYPE = "complex immune"
+DIVERSE_IMMUNE_ARCHETYPE = "diverse immune"
 LO_CP_ARCHETYPES = ("low immune", "cytotoxic predominant")
 
 ARCHETYPE_OS_FOREST_UNS_KEY = "archetype_os_forest"
@@ -1317,7 +1317,7 @@ def compute_validation_rest_vs_di_os_row(
     return {
         "dataset": "Validation",
         "contrast": "rest vs diverse immune",
-        "reference": "diverse immune (complex immune)",
+        "reference": "diverse immune",
         "comparison": "rest (low immune + cytotoxic predominant)",
         "time_endpoint": "OS",
         "time_unit": "years",

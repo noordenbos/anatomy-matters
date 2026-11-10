@@ -43,7 +43,7 @@ ARCHETYPE_DISCOVERY_EXCLUDE_PATIENT_IDS = frozenset({
 CLUSTER_NAME_MAP = {
     1: "low immune",
     2: "cytotoxic predominant",
-    3: "complex immune",
+    3: "diverse immune",
 }
 
 TUMORIMMUNE_ARCHETYPE_ID_COL = "tumorimmune_archetype_id"

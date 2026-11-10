@@ -31,7 +31,7 @@ KM_AT_RISK_BOTTOM = 0.28
 ARCHETYPE_NAME_MAP = {
     1: "low immune",
     2: "cytotoxic predominant",
-    3: "complex immune",
+    3: "diverse immune",
 }
 LOCATION_RECODE = {
     "pBONE": "bone",

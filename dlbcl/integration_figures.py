@@ -18,7 +18,7 @@ from .classifier_colors import (
 ARCHETYPE_NAME_MAP = {
     1: "low immune",
     2: "cytotoxic predominant",
-    3: "complex immune",
+    3: "diverse immune",
 }
 
 LOCATION_RECODE = {
@@ -72,7 +72,7 @@ DONUT_COLOR_PALETTES = {
     "Tumor Immune Archetype\n(this work)": {
         "cytotoxic predominant": "#e41a1c",
         "low immune": "rebeccapurple",
-        "complex immune": "#2ca02c",
+        "diverse immune": "#2ca02c",
         "unknown": "whitesmoke",
         "nan": "whitesmoke",
         "NA": "whitesmoke",
@@ -596,7 +596,7 @@ def plot_donut_circos(
             observed = {str(v).strip() for v in work[col].dropna().unique()}
             entries = [(k, v) for k, v in palette.items() if k in observed and not is_missing_label(k)]
             if col == "Tumor Immune Archetype\n(this work)":
-                order = ["cytotoxic predominant", "low immune", "complex immune"]
+                order = ["cytotoxic predominant", "low immune", "diverse immune"]
                 rank = {name: i for i, name in enumerate(order)}
                 entries.sort(key=lambda x: (rank.get(str(x[0]), 999), str(x[0])))
             if col == HLA_CLASS_STATE_LABEL:
@@ -1463,7 +1463,7 @@ def run_association_analysis(
 
 
 LOCATION_GROUP_ORDER = ["PCNS", "bone", "nodal", "testis"]
-ARCHETYPE_GROUP_ORDER = ["low immune", "cytotoxic predominant", "complex immune"]
+ARCHETYPE_GROUP_ORDER = ["low immune", "cytotoxic predominant", "diverse immune"]
 
 _SKIP_FEATURE_VALUES = {"unknown", "unassigned", "nan", "na", ""}
 
@@ -1547,7 +1547,7 @@ METRIC_FEATURE_ORDER: dict[str, list[str]] = {
     "Chapuy 2025 DLBclass": ["C1", "C2", "C3", "C4", "C5"],
     "Ciavarella 2018 Cluster": ["Cold", "Intermediate", "Hot"],
     "Kotlov 2021 LME": ["Depleted", "Inflammatory", "Mesenchymal", "GC-like"],
-    "This work": ["low immune", "cytotoxic predominant", "complex immune"],
+    "This work": ["low immune", "cytotoxic predominant", "diverse immune"],
     "Steen 2021 Lymphoma Ecotype": _STEEN_ECOTYPE_LEVELS,
     "Steen 2021 EcoTyper (confident)": _STEEN_ECOTYPE_LEVELS,
     "Steen 2021 EcoTyper (best match)": _STEEN_ECOTYPE_LEVELS,
@@ -2091,6 +2091,6 @@ def _format_group_label(group: str) -> str:
         return "Cytotoxic\npredominant"
     if g == "low immune":
         return "Low\nimmune"
-    if g == "complex immune":
+    if g == "diverse immune":
         return "Diverse\nimmune"
     return g

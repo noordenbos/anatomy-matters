@@ -7,8 +7,8 @@ model probabilities and raw measurements are not alternate label sources.
 from __future__ import annotations
 
 import pandas as pd
+from .classification_labels import ARCHETYPE_LABELS, validate_ciavarella_labels, validate_archetype_labels
 
-ARCHETYPE_LABELS = {1: 'low immune', 2: 'cytotoxic predominant', 3: 'complex immune'}
 ASSIGNMENT_COLUMNS = frozenset({
     'tumorimmune_archetype_id', 'tumorimmune_archetype',
     'pred_tumorimmune_archetype_id', 'pred_tumorimmune_archetype',
@@ -38,13 +38,23 @@ def discovery_assignments(adata) -> pd.DataFrame:
     """Read the discovery table, with no legacy dictionary/CSV fallback."""
     if 'case_classifications' not in adata.uns:
         raise KeyError("Missing authoritative uns['case_classifications']")
-    return patient_frame(adata.uns['case_classifications'])
+    frame = patient_frame(adata.uns['case_classifications'])
+    if 'tumorimmune_archetype' in frame:
+        validate_archetype_labels(frame['tumorimmune_archetype'])
+    if 'Ciav_Cluster' in frame:
+        validate_ciavarella_labels(frame['Ciav_Cluster'])
+    return frame
 
 
 def validation_assignments(validation_uns: dict) -> pd.DataFrame:
     if 'case_classification_validation' not in validation_uns:
         raise KeyError("Missing authoritative validation_cohort['case_classification_validation']")
-    return patient_frame(validation_uns['case_classification_validation'])
+    frame = patient_frame(validation_uns['case_classification_validation'])
+    if 'tumorimmune_archetype' in frame:
+        validate_archetype_labels(frame['tumorimmune_archetype'])
+    if 'Ciav_Cluster' in frame:
+        validate_ciavarella_labels(frame['Ciav_Cluster'])
+    return frame
 
 
 def discovery_archetype_dict(adata) -> dict[str, int]:

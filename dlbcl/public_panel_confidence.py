@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import anndata as ad
+from .classification_labels import validate_ciavarella_labels
 
 SCHEMA = 'external-panel-confidence-v1'
 SOURCES = {
@@ -104,6 +105,11 @@ def load_public_adata(path):
                     raise ValueError('Benchmark sections must contain aggregate external results only')
                 if 'cohort' in value and not set(value.cohort) <= {'Schmitz','Morin','Li','Chapuy','GSE178394'}:
                     raise ValueError('Unexpected cohort in external reference results')
+                if 'classifier' in value:
+                    selected=value['classifier'].eq('Ciavarella')
+                    for column in ('label','subtype','full_cluster','panel_cluster_aligned'):
+                        if column in value:
+                            validate_ciavarella_labels(value.loc[selected,column].loc[lambda s:s.ne('All')])
     return result
 
 
@@ -152,7 +158,7 @@ def label_colors(config_path):
     colors['Lymph2Cx']['UNC']=colors['Lymph2Cx']['Unclassified']
     colors['EcoTyper']['Unassigned']='#BBBBBB'
     colors['Ciavarella']={name:config['ciavarella']['reference_colors'][key]
-                          for name,key in [('High','Cluster 1'),('Intermediate','Cluster 2'),('Low','Cluster 3')]}
+                          for name,key in [('Hot','Cluster 1'),('Intermediate','Cluster 2'),('Cold','Cluster 3')]}
     return colors
 
 

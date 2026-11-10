@@ -2,12 +2,15 @@
 from pathlib import Path
 import json
 import pandas as pd
+from .classification_labels import validate_ciavarella_labels
 
 
 def load_requirements(path):
     payload=json.loads(Path(path).read_text())
     if payload.get('schema')!='declared-panel-features-v1':
         raise ValueError('Expected a declared-panel feature requirements file')
+    validate_ciavarella_labels([row['subtype'] for row in payload['transcriptomic_reference_sets']
+                               if row['classifier']=='Ciavarella' and row['subtype']!='All'])
     return payload
 
 

@@ -18,6 +18,7 @@ from anndata.io import read_elem
 
 from .case_assignments import discovery_assignments, validation_assignments
 from .classification_audit import payload_digest, sha256
+from .classification_labels import ARCHETYPE_FIELD_DEFINITION, CIAVARELLA_FIELD_DEFINITION, validate_ciavarella_labels
 
 SCHEMA = 'supplementary-source-v1'
 NAMESPACE = 'uns/supplementary'
@@ -125,6 +126,16 @@ def load_source(path, *, validate=True):
 
 def validate_store(uns):
     store = uns['supplementary']
+    definitions=json.loads(store['field_definitions_json'])
+    if definitions['tumorimmune_archetype'] != ARCHETYPE_FIELD_DEFINITION:
+        raise ValueError('Supplementary archetype definition must use the canonical source labels')
+    if definitions.get('Ciav_Cluster')!=CIAVARELLA_FIELD_DEFINITION:
+        raise ValueError('Ciavarella field definition is not canonical; refresh the supplementary source metadata')
+    memberships=decode_table(store['reference_gene_memberships'])
+    for value in memberships.loc[memberships['Classifier'].eq('Ciavarella'),'Subtype memberships'].unique():
+        validate_ciavarella_labels(value.split(', '))
+    validate_ciavarella_labels([row['Subtype'] for row in json.loads(store['coverage_spec_json'])
+                               if row['Classifier']=='Ciavarella' and row['Subtype']!='All'])
     for key,expected in json.loads(store.get('reference_json_sha256','{}')).items():
         if hashlib.sha256(store[key].encode()).hexdigest()!=expected:
             raise ValueError('Reference metadata changed without an explicit refresh: '+key)
@@ -133,6 +144,8 @@ def validate_store(uns):
         if 'table_sha256' in entry and table_digest(decode_table(entry))!=entry['table_sha256']:
             raise ValueError('Reference table changed without an explicit refresh: '+key)
     catalog = json.loads(store['catalog_json'])
+    if 'complex immune' in json.dumps(catalog).casefold():
+        raise ValueError('Supplementary catalogue uses an obsolete archetype name; refresh the source metadata')
     names = [r['name'] for r in catalog]
     if len(names) != len(set(names)):
         raise ValueError('Duplicate supplementary worksheet identifiers')
@@ -142,6 +155,8 @@ def validate_store(uns):
             referenced.append(row['key'])
             entry = store['tables'][row['key']]
             data = decode_table(entry)
+            if 'complex immune' in json.dumps(table_payload(data)).casefold():
+                raise ValueError('Supplementary result uses an obsolete archetype name: '+row['name'])
             if table_digest(data) != entry['table_sha256']:
                 raise ValueError('Stored table changed without a reviewed refresh: '+row['name'])
     if len(referenced) != len(set(referenced)) or set(referenced) != set(store['tables']):
