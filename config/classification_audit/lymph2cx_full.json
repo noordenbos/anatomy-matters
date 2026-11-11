@@ -1,0 +1,149 @@
+{
+  "version": "2026-10-16",
+  "status": "external_NanoString_research_reconstruction",
+  "features": [
+    {
+      "reference_gene": "ASB13",
+      "gene": "ASB13",
+      "normalization_weight": 0.0,
+      "coefficient": -66.35
+    },
+    {
+      "reference_gene": "CCDC50",
+      "gene": "CCDC50",
+      "normalization_weight": 0.0,
+      "coefficient": 40.54
+    },
+    {
+      "reference_gene": "CREB3L2",
+      "gene": "CREB3L2",
+      "normalization_weight": 0.0,
+      "coefficient": 65.79
+    },
+    {
+      "reference_gene": "CYB5R2",
+      "gene": "CYB5R2",
+      "normalization_weight": 0.0,
+      "coefficient": 67.72
+    },
+    {
+      "reference_gene": "IRF4",
+      "gene": "IRF4",
+      "normalization_weight": 0.0,
+      "coefficient": 71.92
+    },
+    {
+      "reference_gene": "ISY1",
+      "gene": "ISY1",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "ITPKB",
+      "gene": "ITPKB",
+      "normalization_weight": 0.0,
+      "coefficient": -67.78
+    },
+    {
+      "reference_gene": "LIMD1",
+      "gene": "LIMD1",
+      "normalization_weight": 0.0,
+      "coefficient": 61.92
+    },
+    {
+      "reference_gene": "MAML3",
+      "gene": "MAML3",
+      "normalization_weight": 0.0,
+      "coefficient": -58.59
+    },
+    {
+      "reference_gene": "MME",
+      "gene": "MME",
+      "normalization_weight": 0.0,
+      "coefficient": -56.55
+    },
+    {
+      "reference_gene": "MYBL1",
+      "gene": "MYBL1",
+      "normalization_weight": 0.0,
+      "coefficient": -72.92
+    },
+    {
+      "reference_gene": "PIM2",
+      "gene": "PIM2",
+      "normalization_weight": 0.0,
+      "coefficient": 71.8
+    },
+    {
+      "reference_gene": "R3HDM1",
+      "gene": "R3HDM1",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "RAB7L1",
+      "gene": "RAB29",
+      "normalization_weight": 0.0,
+      "coefficient": 70.45
+    },
+    {
+      "reference_gene": "S1PR2",
+      "gene": "S1PR2",
+      "normalization_weight": 0.0,
+      "coefficient": -78.74
+    },
+    {
+      "reference_gene": "SERPINA9",
+      "gene": "SERPINA9",
+      "normalization_weight": 0.0,
+      "coefficient": -61.81
+    },
+    {
+      "reference_gene": "TNFRSF13B",
+      "gene": "TNFRSF13B",
+      "normalization_weight": 0.0,
+      "coefficient": 66.49
+    },
+    {
+      "reference_gene": "TRIM56",
+      "gene": "TRIM56",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "UBXN4",
+      "gene": "UBXN4",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    },
+    {
+      "reference_gene": "WDR55",
+      "gene": "WDR55",
+      "normalization_weight": 0.2,
+      "coefficient": 0.0
+    }
+  ],
+  "predictors": 15,
+  "housekeeping": 5,
+  "lower": 715.4653189529806,
+  "upper": 1249.575718489061,
+  "calibration_cohort": "GSE178394",
+  "calibration_n": 170,
+  "order": [
+    "GCB",
+    "UNC",
+    "ABC"
+  ],
+  "normalization": "log2(positive raw counts), subtract mean log2 of five measured housekeeping genes",
+  "gene_aliases": {
+    "RAB7L1": "RAB29"
+  },
+  "imputation": "none",
+  "pseudocount": "none",
+  "coefficients": "Fixed published patent weights, never fitted to reference labels",
+  "objective": "Three-class macro recall; ties choose lowest ordered cutpoints",
+  "performance": "Use five_fold_out_of_fold results; all-case thresholds fitted for future external use only",
+  "applicability": "NanoString research only; cross-codeset transfer still requires evaluation",
+  "official_portal_equivalence": false,
+  "installed_as_study_default": false
+}

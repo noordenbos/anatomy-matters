@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "version": "1.1.0",
+  "status": "release-candidate",
+  "zenodo_record_id": null,
+  "files": [
+    {
+      "name": "DLBCL_location_2026.publish.h5ad",
+      "path": "data/DLBCL_location_2026.h5ad",
+      "bytes": 637900669,
+      "sha256": "2adfd978e1c706d61b3cf024e88c2b4193aa32b51d8ef5b7e839f75b6a0c3ffe"
+    },
+    {
+      "name": "panel_call_confidence.public.h5ad",
+      "path": "data/public/panel_call_confidence.public.h5ad",
+      "bytes": 87623898,
+      "sha256": "b10c348395be8791d6f4c1cb9a02dfa279225c9a07ceffcef996f7f227dc8fc0"
+    }
+  ]
+}

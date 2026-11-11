@@ -1,0 +1,20 @@
+{
+  "version": "2026-10-15",
+  "model": "14-predictor patent-weight reconstruction",
+  "lower": 949.6770973015505,
+  "upper": 1551.0812832602555,
+  "order": [
+    "GCB",
+    "UNC",
+    "ABC"
+  ],
+  "calibration_cohort": "Morin",
+  "calibration_n": 294,
+  "objective": "training macro recall; fitted once, frozen across all query cohorts",
+  "reference_sha256": "ca5a8606c2ad04d5d02a2df3029fc1838bd073c668dbf5cff1685fbe18f3a7bb",
+  "coefficients_sha256": "b381718e75ec46c7288e39c60fd73f550a653e066fd925361038fea6b03c0ff0",
+  "score_inputs": "same fourteen measured predictors; RAB29 contribution omitted even when available",
+  "housekeeping": "five; measured ISY1 preferred, ISY1-RAB43 fallback",
+  "performance": "Use prior five-fold out-of-fold experiment; Morin application here is calibration/resubstitution",
+  "platform_transfer": "NanoString and microarray applications exploratory; no per-cohort label fitting"
+}

@@ -1,0 +1,202 @@
+{
+  "source": "https://github.com/difuSJTU/LymphPlex",
+  "baseline": "Native calls on full author example inputs; no ground-truth label claim",
+  "method": "Unmodified author GetCluster/PAM with numeric NA; TP53 override; no imputation",
+  "limitation": "Example retention is not independent clinical validation. Overall agreement includes TP53-priority cases; inspect non-TP53 and per-label results.",
+  "agreement": [
+    {
+      "mask": "genes",
+      "n": 616,
+      "matches": 606,
+      "agreement": 0.9837662337662336,
+      "non_TP53_n": 314,
+      "non_TP53_agreement": 0.9681528662420382
+    },
+    {
+      "mask": "genes_BCL6",
+      "n": 616,
+      "matches": 578,
+      "agreement": 0.9383116883116884,
+      "non_TP53_n": 314,
+      "non_TP53_agreement": 0.8789808917197452
+    },
+    {
+      "mask": "genes_both_FISH",
+      "n": 616,
+      "matches": 563,
+      "agreement": 0.913961038961039,
+      "non_TP53_n": 314,
+      "non_TP53_agreement": 0.8312101910828026
+    }
+  ],
+  "per_label": [
+    {
+      "mask": "genes",
+      "label": "BN2",
+      "n_full": 45,
+      "n_masked": 45,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "mask": "genes",
+      "label": "EZB",
+      "n_full": 21,
+      "n_masked": 24,
+      "recall": 1.0,
+      "precision": 0.875
+    },
+    {
+      "mask": "genes",
+      "label": "MCD",
+      "n_full": 68,
+      "n_masked": 67,
+      "recall": 0.9852941176470588,
+      "precision": 1.0
+    },
+    {
+      "mask": "genes",
+      "label": "N1",
+      "n_full": 14,
+      "n_masked": 14,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "mask": "genes",
+      "label": "Others",
+      "n_full": 139,
+      "n_masked": 136,
+      "recall": 0.9640287769784172,
+      "precision": 0.9852941176470588
+    },
+    {
+      "mask": "genes",
+      "label": "ST2",
+      "n_full": 27,
+      "n_masked": 28,
+      "recall": 0.8518518518518519,
+      "precision": 0.8214285714285714
+    },
+    {
+      "mask": "genes",
+      "label": "TP53",
+      "n_full": 302,
+      "n_masked": 302,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "BN2",
+      "n_full": 45,
+      "n_masked": 36,
+      "recall": 0.6,
+      "precision": 0.75
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "EZB",
+      "n_full": 21,
+      "n_masked": 24,
+      "recall": 0.9047619047619048,
+      "precision": 0.7916666666666666
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "MCD",
+      "n_full": 68,
+      "n_masked": 68,
+      "recall": 0.9558823529411764,
+      "precision": 0.9558823529411764
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "N1",
+      "n_full": 14,
+      "n_masked": 16,
+      "recall": 1.0,
+      "precision": 0.875
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "Others",
+      "n_full": 139,
+      "n_masked": 140,
+      "recall": 0.920863309352518,
+      "precision": 0.9142857142857144
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "ST2",
+      "n_full": 27,
+      "n_masked": 30,
+      "recall": 0.8518518518518519,
+      "precision": 0.7666666666666667
+    },
+    {
+      "mask": "genes_BCL6",
+      "label": "TP53",
+      "n_full": 302,
+      "n_masked": 302,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "BN2",
+      "n_full": 45,
+      "n_masked": 34,
+      "recall": 0.6,
+      "precision": 0.7941176470588235
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "EZB",
+      "n_full": 21,
+      "n_masked": 28,
+      "recall": 0.6190476190476191,
+      "precision": 0.4642857142857143
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "MCD",
+      "n_full": 68,
+      "n_masked": 68,
+      "recall": 0.9558823529411764,
+      "precision": 0.9558823529411764
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "N1",
+      "n_full": 14,
+      "n_masked": 16,
+      "recall": 1.0,
+      "precision": 0.875
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "Others",
+      "n_full": 139,
+      "n_masked": 140,
+      "recall": 0.8776978417266187,
+      "precision": 0.8714285714285714
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "ST2",
+      "n_full": 27,
+      "n_masked": 28,
+      "recall": 0.7407407407407407,
+      "precision": 0.7142857142857143
+    },
+    {
+      "mask": "genes_both_FISH",
+      "label": "TP53",
+      "n_full": 302,
+      "n_masked": 302,
+      "recall": 1.0,
+      "precision": 1.0
+    }
+  ]
+}

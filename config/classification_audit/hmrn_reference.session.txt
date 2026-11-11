@@ -1,0 +1,28 @@
+R version 4.5.1 (2025-06-13)
+Platform: aarch64-apple-darwin25.0.0
+Running under: macOS Tahoe 26.6.1
+
+Matrix products: default
+BLAS:   <R-install>/Cellar/openblas/0.3.33/lib/libopenblasp-r0.3.33.dylib
+LAPACK: <R-install>/Cellar/r/4.5.1/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+
+Random number generation:
+ RNG:     Mersenne-Twister
+ Normal:  Inversion
+ Sample:  Rounding
+
+locale:
+[1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8
+
+time zone: America/Los_Angeles
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base
+
+other attached packages:
+[1] flexmix_2.3-20 lattice_0.22-7
+
+loaded via a namespace (and not attached):
+[1] compiler_4.5.1    modeltools_0.2-24 nnet_7.3-20       grid_4.5.1
+[5] stats4_4.5.1

@@ -1,0 +1,24 @@
+{
+  "seed": 20261014,
+  "lymphomap_features": 50,
+  "lymphomap_posterior_cutoff": 0,
+  "lymph2cx_lower": 715.4653189529806,
+  "lymph2cx_upper": 1249.575718489061,
+  "study_input_kind": "nanostring_log2_normalized",
+  "study_background": "none in verified validation GeoMean/NanoNorm code; discovery raw preprocessing provenance not independently reconstructed",
+  "clear_unavailable_discovery_calls": [
+    "T29",
+    "T41",
+    "T48"
+  ],
+  "source_adata": "data/DLBCL_location_2026.h5ad",
+  "output_root": "outputs/classification_audit",
+  "rscript": "Rscript",
+  "vendor": "vendor",
+  "hgnc": "config/classification_audit/hgnc_complete_set.txt",
+  "ecotyper_source": "vendor/ecotyper",
+  "kotlov_utils": "vendor/BostonGene_LME/lme/utils.py",
+  "lymphomap_reference_genes": "config/classification_audit/lymphomap_reference_genes.tsv",
+  "ecotyper_reference_genes": "config/classification_audit/ecotyper_reference_genes.csv",
+  "promote": false
+}

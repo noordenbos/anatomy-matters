@@ -1,0 +1,241 @@
+{
+  "title": "Supplementary Table",
+  "subtitle": "Molecular classifier implementations and feature handling",
+  "repository": "https://github.com/noordenbos/anatomy-matters",
+  "code_revision": "v1.1.0",
+  "introduction": "Implementation details for the four genomic and five transcriptomic classifiers applied to the discovery and institutional validation cohorts. The table identifies author software, reference-model adaptations and research reconstructions, with explicit handling of unavailable inputs. Hyperlinks identify the original methods and the versioned analysis code.",
+  "sections": [
+    {
+      "title": "A Genomic classifiers",
+      "notebook": "notebooks/genomic_classification_audit.ipynb",
+      "notebook_label": "Genomic classification notebook",
+      "lead": "Inputs comprise selected mutation events, per-case panel coverage and measured rearrangements by fluorescence in situ hybridization (FISH). Regional copy-number profiles are unavailable. A negative result is encoded as zero only where the corresponding feature was measured.",
+      "rows": [
+        {
+          "method": "LymphGen 2.0",
+          "status": "Author model",
+          "publication": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8459709/",
+          "inputs": "Panel-specific mutation features, including MYD88 L265P and truncating consequences, plus available FISH results.",
+          "implementation": "The native version 2 reference model is run separately for each panel using its full measured-gene list, including genes with no observed variants. Unavailable FISH remains missing. Native subtype, composite and Other outputs are retained. A53 is not evaluated because copy-number data are absent. Local model outputs were checked against portal outputs on identical inputs.",
+          "code": [
+            {
+              "label": "Notebook section 2",
+              "path": "notebooks/genomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Model runner",
+              "path": "tools/classification_audit/run_lymphgen.R"
+            },
+            {
+              "label": "Input preparation",
+              "path": "tools/classification_audit/prepare_genomic.py"
+            }
+          ]
+        },
+        {
+          "method": "DLBclass",
+          "status": "Author ensemble with panel adaptation",
+          "publication": "https://doi.org/10.1182/blood.2024025652",
+          "inputs": "163 mutation, regional copy-number and rearrangement features, reduced to 21 model inputs. FISH supplies measured rearrangement features.",
+          "implementation": "Unavailable features receive their encoded-feature means from the 699-case reference, including all regional copy-number features and unmeasured rearrangements. Fractional imputed values are preserved through feature reduction. The 500 author neural networks and confidence transformation are retained; the predicted C1–C5 class is used without an additional confidence exclusion. Mutation-panel coverage alone does not establish structural-variant coverage.",
+          "code": [
+            {
+              "label": "Notebook section 3",
+              "path": "notebooks/genomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Ensemble inference",
+              "path": "dlbcl/dlbclass_targeted.py",
+              "line": 63
+            },
+            {
+              "label": "Feature means",
+              "path": "config/dlbclass/feature_reference.csv"
+            }
+          ]
+        },
+        {
+          "method": "HMRN",
+          "status": "Reference refit with research extension",
+          "publication": "https://doi.org/10.1182/blood.2019003535",
+          "inputs": "Binary author-model features, including hotspots, rearrangements, mutation-or-deletion features and somatic hypermutation features.",
+          "implementation": "The author reference is refitted with the recorded random-number settings, 1,000 starts and AIC selection. Frozen centers and priors reproduce six biological groups, including NEC. Prediction uses the highest posterior after marginalizing unobserved Bernoulli features. Unmeasured deletions and incompletely assessed hypermutation are not negative. This missing-feature extension is a research adaptation; no measured features yields Unassigned.",
+          "code": [
+            {
+              "label": "Notebook section 4",
+              "path": "notebooks/genomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Reference fit",
+              "path": "tools/classification_audit/fit_hmrn.R"
+            },
+            {
+              "label": "Feature likelihood",
+              "path": "dlbcl/genomic_classification_audit.py",
+              "line": 52
+            }
+          ]
+        },
+        {
+          "method": "LymphPlex",
+          "status": "Author algorithm with native missing-value handling",
+          "publication": "https://doi.org/10.1038/s41392-023-01358-y",
+          "inputs": "Binary mutation and BCL2/BCL6 rearrangement features required by the author centers and seed rules, plus measured TP53 status.",
+          "implementation": "The unmodified author function applies a unique observed seed pattern or nearest fixed PAM center; TP53 mutation has priority. Missing inputs remain numeric NA and native PAM uses available-feature distances, without imputation. Others is the residual class. Exhaustive missing-input completions annotate sensitivity without vetoing the native call. Incomplete-panel accuracy was not separately validated in the original publication.",
+          "code": [
+            {
+              "label": "Notebook section 5",
+              "path": "notebooks/genomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Native R runner",
+              "path": "tools/classification_audit/run_lymphplex.R"
+            },
+            {
+              "label": "Missing-input audit",
+              "path": "dlbcl/genomic_classification_audit.py",
+              "line": 130
+            }
+          ]
+        }
+      ],
+      "notes": [
+        "Source availability and model output are separate: cases without reproducible genomic inputs remain unknown; Other, Others and NEC are classifier outputs. Panel-specific input masks are exported. The validation-wide BLYMFv2 panel designation is a provisional coverage assumption.",
+        "AIC, Akaike information criterion; CN, copy number; NEC, not elsewhere classified; PAM, partitioning around medoids. Native LymphPlex execution requires measured TP53 and, for TP53-negative cases, at least one measured center feature; this safeguard is not a validated minimum coverage requirement."
+      ]
+    },
+    {
+      "title": "B Transcriptomic classifiers",
+      "notebook": "notebooks/transcriptomic_classification_audit.ipynb",
+      "notebook_label": "Transcriptomic classification notebook",
+      "lead": "Inputs are normalized NanoString log2 matrices. Validation raw counts undergo positive-control scaling and housekeeping centering, without negative-control subtraction; discovery starts from its supplied normalized matrix. Gene symbols are harmonized and duplicate mappings averaged on the log scale.",
+      "rows": [
+        {
+          "method": "LymphoMAP",
+          "status": "Author package with panel-restricted features",
+          "publication": "https://doi.org/10.1016/j.ccell.2025.06.002",
+          "inputs": "Available genes shared with the LymphoMapR reference; 50 features selected per archetype within that overlap.",
+          "implementation": "Native reference feature selection, ComBat adjustment and naive Bayes inference are retained. The already-log input branch is used for normalized NanoString log ratios, an explicit cross-platform choice. The posterior cutoff is 0, yielding best-match calls. The feature budget is a run setting, not a universal minimum panel requirement; actual selected genes are exported.",
+          "code": [
+            {
+              "label": "Notebook section 2",
+              "path": "notebooks/transcriptomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Run settings",
+              "path": "config/classification_audit/default.json"
+            },
+            {
+              "label": "Author package",
+              "url": "https://github.com/Green-Lab-MDACC/LymphoMapR"
+            }
+          ]
+        },
+        {
+          "method": "EcoTyper",
+          "status": "Author lymphoma recovery workflow",
+          "publication": "https://doi.org/10.1016/j.ccell.2021.08.011",
+          "inputs": "Normalized expression for available lymphoma-reference genes; cell-state and ecotype reference models.",
+          "implementation": "Native recovery scales genes within the query cohort and fills absent reference genes with zero. Ecotype calls require the native assignment rule: BH-adjusted assignment q < 0.25 and assignment to an ecotype-associated cell state. Otherwise the output is Unassigned. Maximum-abundance labels and B-cell state summaries are stored separately; abundance is not a posterior probability.",
+          "code": [
+            {
+              "label": "Notebook section 3",
+              "path": "notebooks/transcriptomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Resource hashes",
+              "path": "config/classification_audit/resource_manifest.json"
+            },
+            {
+              "label": "Author recovery",
+              "url": "https://github.com/digitalcytometry/ecotyper"
+            }
+          ]
+        },
+        {
+          "method": "LME Kotlov",
+          "status": "Clustering reconstruction",
+          "publication": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8178179/",
+          "inputs": "22 author ssGSEA signatures and three PROGENy pathway scores. Signature overlap is reported; absent pathway genes contribute zero.",
+          "implementation": "Author median scaling and clipping precede Louvain clustering with an explicit threshold search. Cluster profiles receive the highest-correlated published subtype centroid from panel-restricted Schmitz, Morin and Li references; many-to-one naming is allowed. This cohort-dependent reconstruction does not use the authors’ trained KNN classifier and need not recover all four published groups.",
+          "code": [
+            {
+              "label": "Notebook section 4",
+              "path": "notebooks/transcriptomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Louvain selection",
+              "path": "dlbcl/rna_clustering_benchmark.py",
+              "line": 63
+            },
+            {
+              "label": "Label centroids",
+              "path": "config/classification_audit/kotlov_reference_centroids.csv"
+            }
+          ]
+        },
+        {
+          "method": "Ciavarella",
+          "status": "Clustering reconstruction",
+          "publication": "https://doi.org/10.1093/annonc/mdy450",
+          "inputs": "All 45 signature genes on the normalized log2 scale, without additional per-gene standardization.",
+          "implementation": "Euclidean/Ward hierarchical clustering is cut into three groups, ordered by mean signature expression and named Hot, Intermediate and Cold. All 45 genes are required; missing features cause an error. The partition and group names depend on the query cohort. Intermediate is a biological expression group, not a missing or uncertain call.",
+          "code": [
+            {
+              "label": "Notebook section 4",
+              "path": "notebooks/transcriptomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Ward partition",
+              "path": "dlbcl/rna_clustering_benchmark.py",
+              "line": 32
+            },
+            {
+              "label": "Signature genes",
+              "path": "config/classification_audit/clustering_features.csv"
+            }
+          ]
+        },
+        {
+          "method": "COO Lymph2Cx",
+          "status": "Empirical research reconstruction",
+          "publication": "https://doi.org/10.1182/blood-2013-11-536433",
+          "inputs": "15 predictor genes and five housekeeping genes; fixed public-patent coefficients after log2 housekeeping centering. All 20 genes are required.",
+          "implementation": "Borders calibrated on 170 external NanoString profiles (GSE178394) define GCB (score < 715.4653), UNC (715.4653 ≤ score < 1249.5757) and ABC (score ≥ 1249.5757); values here are rounded. UNC is a valid output. This research reconstruction lacks proprietary gene-specific codeset calibration. Full-precision borders are supplied and are not transferred automatically to RNA-seq or microarrays.",
+          "code": [
+            {
+              "label": "Notebook section 5",
+              "path": "notebooks/transcriptomic_classification_audit.ipynb"
+            },
+            {
+              "label": "Model and borders",
+              "path": "config/classification_audit/lymph2cx_full.json"
+            },
+            {
+              "label": "Coefficient source",
+              "path": "config/lymph2cx_patent_research.json"
+            }
+          ]
+        }
+      ],
+      "notes": [
+        "The two cohorts are processed separately. Cohort-dependent scaling, batch adjustment or clustering can change calls when the query population changes. RNA-seq and microarray benchmark inputs use explicit platform-specific preprocessing rather than an assumed common measurement scale.",
+        "BH, Benjamini–Hochberg; COO, cell of origin; GCB, germinal-center B-cell-like; ABC, activated B-cell-like; UNC, unclassified; ssGSEA, single-sample gene set enrichment analysis; KNN, k-nearest neighbors."
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "label": "Classifier resource setup and input contracts",
+      "path": "docs/classification-resources.md"
+    },
+    {
+      "label": "Genomic panel sensitivity notebook",
+      "path": "notebooks/genomic_panel_call_confidence.ipynb"
+    },
+    {
+      "label": "Transcriptomic panel sensitivity notebook",
+      "path": "notebooks/transcriptomic_panel_call_confidence.ipynb"
+    }
+  ]
+}

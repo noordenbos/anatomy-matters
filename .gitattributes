@@ -1,0 +1,3 @@
+
+# HGNC TSV preserves empty final fields as trailing tab delimiters.
+config/classification_audit/hgnc_complete_set.txt whitespace=-blank-at-eol
